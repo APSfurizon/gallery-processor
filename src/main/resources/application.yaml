@@ -1,0 +1,36 @@
+server:
+  port: ${BACKEND_SERVER_PORT:9090}
+
+spring:
+  application:
+    name: gallery-processor
+  threads:
+    virtual:
+      enabled: true
+  thread-executor: virtual
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+  datasource:
+    url: ${BACKEND_DATASOURCE_URL:jdbc:postgresql://localhost:5432/furizon}
+    username: ${BACKEND_DATASOURCE_USERNAME:user}
+    password: ${BACKEND_DATASOURCE_PASSWORD:pass}
+    driver-class-name: org.postgresql.Driver
+
+security:
+  http-password: ${HTTP_BASIC_AUTH_PASSWORD:password}
+  http-username: ${HTTP_BASIC_AUTH_USER:user}
+
+logbook:
+  format:
+    style: http
+  httpclient:
+    decompress-response: true
+
+springdoc:
+  api-docs:
+    path: /docs/api-docs
+    enabled: ${DOCS_ENABLED:false}
+  swagger-ui:
+    enabled: ${DOCS_ENABLED:false}
