@@ -34,3 +34,6 @@ springdoc:
     enabled: ${DOCS_ENABLED:false}
   swagger-ui:
     enabled: ${DOCS_ENABLED:false}
+
+worker:
+  delay: ${WORKER_DELAY:20}

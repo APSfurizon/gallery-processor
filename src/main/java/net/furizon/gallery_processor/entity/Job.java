@@ -11,10 +11,8 @@ import jakarta.validation.constraints.Null;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import net.furizon.gallery_processor.dto.JobResponse;
 import net.furizon.gallery_processor.dto.JobType;
 import net.furizon.gallery_processor.dto.NewJobRequest;
-import org.jetbrains.annotations.Nullable;
 
 @Data
 @Entity

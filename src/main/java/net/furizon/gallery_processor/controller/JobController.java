@@ -11,8 +11,8 @@ import net.furizon.gallery_processor.dto.JobResponse;
 import net.furizon.gallery_processor.dto.JobStatus;
 import net.furizon.gallery_processor.dto.NewJobRequest;
 import net.furizon.gallery_processor.entity.Job;
-import net.furizon.gallery_processor.infrastructure.config.security.InternalAuthorize;
 import net.furizon.gallery_processor.repository.JobRepository;
+import net.furizon.gallery_processor.service.WorkerManagementService;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +27,9 @@ public class JobController {
     private final JobRepository jobRepository;
 
     @NotNull
+    private final WorkerManagementService workerService;
+
+    @NotNull
     private final ObjectMapper objectMapper;
 
     @PostMapping("/")
@@ -36,6 +39,7 @@ public class JobController {
         if (!alreadyExists) {
             log.info("Storing job {} in the queue", newJobRequest.getId());
             jobRepository.save(new Job(newJobRequest));
+            workerService.run();
         } else {
             log.info("Received job request for {} but it already exists", newJobRequest.getId());
         }
