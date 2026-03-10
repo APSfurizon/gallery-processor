@@ -1,0 +1,10 @@
+/home/runner/work/gallery-processor/gallery-processor/src/main/java/it/apsfurizon/galleryprocessor/GalleryProcessorApplication.java
+/home/runner/work/gallery-processor/gallery-processor/src/main/java/it/apsfurizon/galleryprocessor/config/SecurityConfig.java
+/home/runner/work/gallery-processor/gallery-processor/src/main/java/it/apsfurizon/galleryprocessor/controller/JobController.java
+/home/runner/work/gallery-processor/gallery-processor/src/main/java/it/apsfurizon/galleryprocessor/dto/JobRequest.java
+/home/runner/work/gallery-processor/gallery-processor/src/main/java/it/apsfurizon/galleryprocessor/dto/JobResponse.java
+/home/runner/work/gallery-processor/gallery-processor/src/main/java/it/apsfurizon/galleryprocessor/entity/Job.java
+/home/runner/work/gallery-processor/gallery-processor/src/main/java/it/apsfurizon/galleryprocessor/repository/JobRepository.java
+/home/runner/work/gallery-processor/gallery-processor/src/main/java/it/apsfurizon/galleryprocessor/service/JobAlreadyExistsException.java
+/home/runner/work/gallery-processor/gallery-processor/src/main/java/it/apsfurizon/galleryprocessor/service/JobService.java
+/home/runner/work/gallery-processor/gallery-processor/src/main/java/it/apsfurizon/galleryprocessor/service/ProcessorService.java
