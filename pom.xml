@@ -26,9 +26,15 @@
 		<tag/>
 		<url/>
 	</scm>
-	<properties>
-		<java.version>23</java.version>
-	</properties>
+    <properties>
+        <java.version>23</java.version>
+        <lombok.version>1.18.42</lombok.version>
+        <postgresql.version>42.7.8</postgresql.version>
+        <org.jetbrains.version>26.0.2-1</org.jetbrains.version>
+        <org.zalando.version>3.12.3</org.zalando.version>
+        <org.springdoc.version>2.8.14</org.springdoc.version>
+        <spring.boot.version>${parent.version}</spring.boot.version>
+    </properties>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -49,11 +55,13 @@
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
+            <version>${postgresql.version}</version>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
 			<optional>true</optional>
 		</dependency>
 		<dependency>
@@ -71,48 +79,26 @@
 			<scope>test</scope>
 		</dependency>
         <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${org.springdoc.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
-            <version>26.0.2-1</version>
+            <version>${org.jetbrains.version}</version>
         </dependency>
         <dependency>
             <groupId>org.zalando</groupId>
             <artifactId>logbook-spring-boot-starter</artifactId>
-            <version>3.12.3</version>
+            <version>${org.zalando.version}</version>
         </dependency>
         <dependency>
             <groupId>org.zalando</groupId>
             <artifactId>logbook-httpclient5</artifactId>
-            <version>3.12.3</version>
+            <version>${org.zalando.version}</version>
         </dependency>
 	</dependencies>
-
-
-
-    <!--build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <mainClass>net.furizon.gallery_processor.GalleryProcessorApplication</mainClass>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-        <sourceDirectory>src/main/java</sourceDirectory>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-            </resource>
-        </resources>
-    </build-->
 
 	<build>
 		<plugins>
@@ -135,6 +121,7 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring.boot.version}</version>
 				<configuration>
 					<excludes>
 						<exclude>
