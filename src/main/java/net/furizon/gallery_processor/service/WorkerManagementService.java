@@ -40,7 +40,11 @@ public class WorkerManagementService {
                 jobs = jobRepository.findAllByResultIsNullOrderBySubmittedAtAsc();
                 jobs.forEach(job -> {
                     try {
-                        jobWorker.work(job);
+                        boolean result = jobWorker.work(job);
+                        if (!result) {
+                            log.warn("Job {} failed. Deleting it", job.getId());
+                            jobRepository.delete(job);
+                        }
                     } catch (Exception e) {
                         log.error("Exception {} occurred while working on job {}", e.getMessage(), job.getId(), e);
                     }

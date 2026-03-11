@@ -4,5 +4,6 @@ public enum JobStatus {
     NOT_FOUND,
     PENDING,
     DONE,
-    ALREADY_EXISTS
+    ALREADY_EXISTS,
+    FAILED
 }
