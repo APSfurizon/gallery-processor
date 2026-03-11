@@ -39,7 +39,7 @@ public class JobController {
         if (!alreadyExists) {
             log.info("Storing job {} in the queue", newJobRequest.getId());
             jobRepository.save(new Job(newJobRequest));
-            workerService.run();
+            workerService.runAsync();
         } else {
             log.info("Received job request for {} but it already exists", newJobRequest.getId());
         }

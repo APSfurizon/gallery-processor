@@ -6,6 +6,7 @@ import net.furizon.gallery_processor.entity.Job;
 import net.furizon.gallery_processor.repository.JobRepository;
 import net.furizon.gallery_processor.utils.jobworker.JobWorker;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -48,5 +49,10 @@ public class WorkerManagementService {
         } finally {
             working.set(false);
         }
+    }
+
+    @Async
+    public void runAsync() {
+        run();
     }
 }
