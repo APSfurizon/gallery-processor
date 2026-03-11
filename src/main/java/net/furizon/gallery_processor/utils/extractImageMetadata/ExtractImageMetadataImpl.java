@@ -108,6 +108,7 @@ public class ExtractImageMetadataImpl implements ExtractImageMetadata {
                     && shutter == null
                     && aperture == null
                     && iso == null) {
+                log.warn("Early return from {} since all params were null", file);
                 return;
             }
 

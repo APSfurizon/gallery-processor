@@ -14,22 +14,18 @@ import net.furizon.gallery_processor.infrastructure.s3.actions.directUpload.S3Di
 import net.furizon.gallery_processor.repository.JobRepository;
 import net.furizon.gallery_processor.utils.extractFileType.ExtractFileType;
 import net.furizon.gallery_processor.utils.extractImageMetadata.ExtractImageMetadata;
+import net.furizon.gallery_processor.utils.ffmpeg.Ffmpeg;
 import net.furizon.gallery_processor.utils.hashFile.HashFile;
 import net.furizon.gallery_processor.utils.imagemagick.ImageMagick;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 @Slf4j
 @Component
@@ -49,6 +45,8 @@ public class JobWorkerImpl implements JobWorker {
 
     @NotNull
     private final ImageMagick imageMagick;
+    @NotNull
+    private final Ffmpeg ffmpeg;
 
     @NotNull
     private final JobRepository jobRepository;

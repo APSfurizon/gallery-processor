@@ -37,12 +37,13 @@ springdoc:
 
 worker:
   delay: ${WORKER_DELAY:20}
-  quality: ${THUMBNAIL_QUALITY:80}
+  quality: ${THUMBNAIL_QUALITY:85}
   render-prefix: ${THUMBNAIL_REDER_PREFIX:rend_}
   thumbnail-prefix: ${THUMBNAIL_REDER_PREFIX:thumb_}
   thumbnail:
     max-dimension: ${THUMBNAIL_DIMENSION:512}
     min-dimension: ${THUMBNAIL_DIMENSION:128}
+    video-max-seek: ${THUMBNAIL_VIDEO_MAX_SEEK_SEC:3}
 
 s3:
   access-key: ${S3_ACCESS_KEY:changeme}
@@ -53,5 +54,7 @@ s3:
 
 cmd-executor:
   imagemagick-binary: ${CMD_IMAGEMAGICK_BINARY:}
+  ffmpeg-binary: ${CMD_FFMPEG_BINARY:ffmpeg}
+  ffprobe-binary: ${CMD_FFPROBE_BINARY:ffmpeg}
   timeout: ${CMD_TIMEOUT_SECS:10}
 
