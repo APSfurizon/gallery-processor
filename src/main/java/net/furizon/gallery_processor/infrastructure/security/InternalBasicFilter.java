@@ -1,4 +1,4 @@
-package net.furizon.gallery_processor.infrastructure.config.security;
+package net.furizon.gallery_processor.infrastructure.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

@@ -37,3 +37,10 @@ springdoc:
 
 worker:
   delay: ${WORKER_DELAY:20}
+
+s3:
+  access-key: ${S3_ACCESS_KEY:changeme}
+  secret-key: ${S3_SECRET_KEY:changeme}
+  endpoint: ${S3_ENDPOINT:}
+  region: ${S3_REGION:changeme}
+  bucket: ${S3_BUCKET:changeme}

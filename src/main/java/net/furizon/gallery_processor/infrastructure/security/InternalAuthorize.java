@@ -1,4 +1,4 @@
-package net.furizon.gallery_processor.infrastructure.config.security;
+package net.furizon.gallery_processor.infrastructure.security;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 

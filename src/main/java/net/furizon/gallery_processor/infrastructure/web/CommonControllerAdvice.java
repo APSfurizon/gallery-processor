@@ -2,7 +2,7 @@ package net.furizon.gallery_processor.infrastructure.web;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import net.furizon.gallery_processor.infrastructure.config.security.GeneralResponseCodes;
+import net.furizon.gallery_processor.infrastructure.security.GeneralResponseCodes;
 import net.furizon.gallery_processor.infrastructure.web.dto.ApiError;
 import net.furizon.gallery_processor.infrastructure.web.dto.HttpErrorResponse;
 import net.furizon.gallery_processor.infrastructure.web.exception.ApiException;
