@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.furizon.gallery_processor.dto.JobResponse;
 import net.furizon.gallery_processor.dto.JobStatus;
+import net.furizon.gallery_processor.dto.JobType;
 import net.furizon.gallery_processor.dto.NewJobRequest;
 import net.furizon.gallery_processor.dto.upload.GalleryProcessorUploadData;
 import net.furizon.gallery_processor.entity.Job;
@@ -63,7 +64,7 @@ public class JobController {
                     .file(job.getName())
                     .status(job.getResult() == null ? JobStatus.PENDING : JobStatus.DONE)
                     .type(job.getType())
-                    .result(job.getResult() == null ? null : objectMapper.readValue(job.getResult(), GalleryProcessorUploadData.class))
+                    .result(job.getResult() == null && job.getType() != JobType.UNKNOWN ? null : objectMapper.readValue(job.getResult(), GalleryProcessorUploadData.class))
                 .build();
         }
         log.info("Job {} not found in queue", jobId);
