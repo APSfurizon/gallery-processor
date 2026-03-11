@@ -10,10 +10,16 @@ import net.furizon.gallery_processor.dto.JobType;
 import net.furizon.gallery_processor.dto.upload.GalleryProcessorUploadData;
 import net.furizon.gallery_processor.entity.Job;
 import net.furizon.gallery_processor.infrastructure.s3.actions.directDownload.S3DirectDownload;
+import net.furizon.gallery_processor.infrastructure.s3.actions.directUpload.S3DirectUpload;
 import net.furizon.gallery_processor.repository.JobRepository;
 import net.furizon.gallery_processor.utils.extractFileType.ExtractFileType;
+import net.furizon.gallery_processor.utils.extractImageMetadata.ExtractImageMetadata;
 import net.furizon.gallery_processor.utils.hashFile.HashFile;
+import net.furizon.gallery_processor.utils.imagemagick.ImageMagick;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
@@ -30,11 +36,19 @@ import java.security.NoSuchAlgorithmException;
 @RequiredArgsConstructor
 public class JobWorkerImpl implements JobWorker {
     @NotNull
-    private final S3DirectDownload s3DirectDownload;
+    private final HashFile hashFile;
     @NotNull
     private final ExtractFileType extractFileType;
     @NotNull
-    private final HashFile hashFile;
+    private final ExtractImageMetadata extractImageMetadata;
+
+    @NotNull
+    private final S3DirectDownload s3DirectDownload;
+    @NotNull
+    private final S3DirectUpload s3DirectUpload;
+
+    @NotNull
+    private final ImageMagick imageMagick;
 
     @NotNull
     private final JobRepository jobRepository;
@@ -42,13 +56,24 @@ public class JobWorkerImpl implements JobWorker {
     @NotNull
     private final ObjectMapper objectMapper;
 
+    @Value("${worker.render-prefix}")
+    private String renderPrefix;
+    @Value("${worker.thumbnail-prefix}")
+    private String thumbnailPrefix;
+
     @Override
     public boolean work(@NotNull Job job) {
+        long jobId = job.getId();
         Path tempFile = null;
         try {
-            tempFile = Files.createTempFile(null, job.getName());
+            String fullFileName = job.getName();
+            String fileName = FilenameUtils.getName(fullFileName);
+            String extension = FilenameUtils.getExtension(fullFileName);
+            tempFile = Files.createTempFile(null, extension);
+            log.info("[{}] Creating temp file {}", jobId, tempFile);
 
             // Download file
+            log.debug("[{}] Downloading from s3 '{}'", jobId, job.getName());
             s3DirectDownload.toFile(job.getName(), tempFile);
 
             // Check magicnumbers for mimetype. If unsupported, quit by setting his type to unknown and empty result field. File deletion will be handled by backend
@@ -84,7 +109,7 @@ public class JobWorkerImpl implements JobWorker {
                     needsRender = true;
                     break;
                 default: {
-                    log.warn("Unsupported file type {} for job {}. Marking it as UNKNOWN", fileType,  job.getId());
+                    log.warn("[{}] Unsupported file type {}. Marking it as UNKNOWN", jobId, fileType);
                     job.setResult("{}");
                     job.setType(JobType.UNKNOWN);
                     jobRepository.save(job);
@@ -96,12 +121,32 @@ public class JobWorkerImpl implements JobWorker {
             job.setType(isPhoto ? JobType.IMGAGE : JobType.VIDEO);
 
             //Extract filesize, hash, content type extracted already
-            dataBuilder.fileSize(Files.size(tempFile));
+            log.debug("[{}] Loading hash of file", jobId);
             dataBuilder.hash(hashFile.hashFile(tempFile));
             dataBuilder.mimeType(fileType.getMimeType());
+            dataBuilder.fileSize(Files.size(tempFile));
+            var data = dataBuilder.build();
 
-            // If video, extract first frame as (resized) thumbnail, video codec, audio codec, audio freq, framerate, length, timestamp, resolution
-            // If image, extract exif, extract resolution
+            boolean result;
+            log.debug("[{}] Executing inner function (isPhoto = {})", jobId, isPhoto);
+            if (isPhoto) {
+                // If image, extract exif, extract resolution
+                result = handleImage(
+                    job,
+                    tempFile,
+                    fileName,
+                    data,
+                    fileType,
+                    needsRender
+                );
+            } else {
+                // If video, extract first frame as (resized) thumbnail, video codec, audio codec, audio freq, framerate, length, timestamp, resolution
+
+            }
+            if (!result) {
+                log.error("[{}] Inner function returned false!", jobId);
+                return false;
+            }
 
             job.setResult(objectMapper.writeValueAsString(dataBuilder.build()));
         } catch (IOException e) {
@@ -124,16 +169,78 @@ public class JobWorkerImpl implements JobWorker {
 
     private boolean handleImage(@NotNull Job job,
                                 @NotNull Path tempFile,
-                                @NotNull GalleryProcessorUploadData.GalleryProcessorUploadDataBuilder builder,
+                                @NotNull String fileName,
+                                @NotNull GalleryProcessorUploadData data,
                                 @NotNull FileType fileType,
-                                boolean needsRender) {
+                                boolean needsRender) throws IOException {
+        final String tempFileName = tempFile.getFileName().toString();
+        long jobId = job.getId();
+        //First round of pass, trying to get as much metadata as possible
+        log.debug("[{}] First pass of exif", jobId);
+        extractImageMetadata.parseExif(tempFile, data, fileType);
 
+        if (needsRender || data.getPhotoMetadata() == null) { //if photo metadata is null we try to conver the image to a better format
+            Path render = null;
+            try {
+                render = Files.createTempFile("rend_", tempFileName);
+                log.info("[{}] Render tempfile: {}", jobId, render);
+                //If needs a render do it now
+                log.debug("[{}] Render", jobId);
+                imageMagick.renderToWebp(tempFile, render, fileType);
+
+                //Reload the metadata again from the rendered file (data will be merged)
+                log.debug("[{}] Second pass of exif", jobId);
+                extractImageMetadata.parseExif(render, data, fileType);
+
+                //Upload rendered image to S3
+                if (needsRender) {
+                    log.info("[{}] Uploading render {}", jobId, render);
+                    final String renderKey = renderPrefix + fileName;
+                    s3DirectUpload.upload(renderKey, render);
+                    data.setRenderedMediaName(renderKey);
+                }
+            } finally {
+                if (render != null) Files.deleteIfExists(render);
+            }
+        }
+
+        //If width/height are still missing, load them from the file itself
+        if (data.getResolutionWidth() == 0 || data.getResolutionHeight() == 0) {
+            log.debug("[{}] No resolution width or height. Retrieving with imagemagick", jobId);
+            imageMagick.getWidthAndHeight(tempFile, fileType, data);
+        }
+
+        Path thumbnail = null;
+        try {
+            thumbnail = Files.createTempFile("thumb_", tempFileName);
+            log.info("[{}] Thumbnail tempfile: {}", jobId, thumbnail);
+            //Create thumbnail
+            log.debug("[{}] Creating thumbnail", jobId);
+            imageMagick.createThumbnail(
+                    tempFile,
+                    thumbnail,
+                    data.getResolutionWidth(),
+                    data.getResolutionHeight(),
+                    fileType
+            );
+
+            //Upload thumbnail to s3
+            log.info("[{}] Uploading thumbnail {}", jobId, thumbnail);
+            final String thumbnailKey = thumbnailPrefix + fileName;
+            s3DirectUpload.upload(thumbnailKey, thumbnail);
+            data.setThumbnailMediaName(thumbnailKey);
+
+        } finally {
+            if (thumbnail != null) Files.deleteIfExists(thumbnail);
+        }
+
+        return true;
     }
 
     private boolean handleVideo(@NotNull Job job,
                                 @NotNull Path tempFile,
-                                @NotNull GalleryProcessorUploadData.GalleryProcessorUploadDataBuilder builder,
+                                @NotNull GalleryProcessorUploadData data,
                                 @NotNull FileType fileType) {
-
+        return true;
     }
 }

@@ -37,6 +37,12 @@ springdoc:
 
 worker:
   delay: ${WORKER_DELAY:20}
+  quality: ${THUMBNAIL_QUALITY:80}
+  render-prefix: ${THUMBNAIL_REDER_PREFIX:rend_}
+  thumbnail-prefix: ${THUMBNAIL_REDER_PREFIX:thumb_}
+  thumbnail:
+    max-dimension: ${THUMBNAIL_DIMENSION:512}
+    min-dimension: ${THUMBNAIL_DIMENSION:128}
 
 s3:
   access-key: ${S3_ACCESS_KEY:changeme}
@@ -44,3 +50,8 @@ s3:
   endpoint: ${S3_ENDPOINT:}
   region: ${S3_REGION:changeme}
   bucket: ${S3_BUCKET:changeme}
+
+cmd-executor:
+  imagemagick-binary: ${CMD_IMAGEMAGICK_BINARY:}
+  timeout: ${CMD_TIMEOUT_SECS:10}
+

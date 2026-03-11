@@ -19,7 +19,7 @@ public class GalleryProcessorUploadData {
     private long fileSize;
     @NotNull private String mimeType;
 
-    @NotNull private String thumbnailMediaName;
+    @Nullable private String thumbnailMediaName; //This should be not null tho!
     @Nullable private String renderedMediaName;
 
     @Nullable private UploadImageMetadata photoMetadata;

@@ -7,26 +7,39 @@ import com.drew.lang.annotations.NotNull;
 import com.drew.lang.annotations.Nullable;
 import com.drew.metadata.Directory;
 import com.drew.metadata.Metadata;
+import com.drew.metadata.avi.AviDirectory;
+import com.drew.metadata.bmp.BmpHeaderDirectory;
+import com.drew.metadata.eps.EpsDirectory;
+import com.drew.metadata.exif.ExifDirectoryBase;
 import com.drew.metadata.exif.ExifIFD0Directory;
+import com.drew.metadata.exif.ExifImageDirectory;
+import com.drew.metadata.exif.ExifInteropDirectory;
 import com.drew.metadata.exif.ExifSubIFDDescriptor;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
+import com.drew.metadata.exif.GpsDirectory;
+import com.drew.metadata.exif.makernotes.CanonMakernoteDirectory;
+import com.drew.metadata.exif.makernotes.KodakMakernoteDirectory;
+import com.drew.metadata.exif.makernotes.OlympusMakernoteDirectory;
+import com.drew.metadata.exif.makernotes.PanasonicMakernoteDirectory;
+import com.drew.metadata.gif.GifImageDirectory;
 import com.drew.metadata.heif.HeifDirectory;
+import com.drew.metadata.ico.IcoDirectory;
 import com.drew.metadata.jpeg.JpegDirectory;
+import com.drew.metadata.mov.media.QuickTimeVideoDirectory;
 import com.drew.metadata.png.PngDirectory;
 import com.drew.metadata.webp.WebpDirectory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.furizon.gallery_processor.dto.upload.GalleryProcessorUploadData;
 import net.furizon.gallery_processor.dto.upload.UploadImageMetadata;
-import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Map;
 import java.util.TimeZone;
+import java.util.function.Supplier;
 
 @Slf4j
 @Component
@@ -35,9 +48,10 @@ public class ExtractImageMetadataImpl implements ExtractImageMetadata {
     private static final ZoneId GMT =  ZoneId.of("GMT");
 
     @Override
-    public void parseExif(@NotNull String path, @NotNull GalleryProcessorUploadData resultObj, @NotNull FileType fileType) {
+    public void parseExif(@NotNull Path file, @NotNull GalleryProcessorUploadData resultObj, @NotNull FileType fileType) {
         try {
-            Metadata metadata = ImageMetadataReader.readMetadata(new File(path));
+            log.info("Parsing metadata from {}", file);
+            Metadata metadata = ImageMetadataReader.readMetadata(file.toFile());
 
             String cameraMaker = null;
             String cameraModel = null;
@@ -81,11 +95,10 @@ public class ExtractImageMetadataImpl implements ExtractImageMetadata {
 
             }
 
-            resultObj.setShotTimestamp(shotTime);
-            Integer width = null, height = null;
-            var widthMetadata = WIDTH_TAG_MAP.get(fileType);
-            var heightMetadata = HEIGHT_TAG_MAP.get(fileType);
-            resultObj.setResolutionWidth(widthMetadata == null ? 0 : int_(widthMetadata, metadata));
+            if (resultObj.getShotTimestamp() == null) resultObj.setShotTimestamp(shotTime);
+            //This may still fail, so an extra call to imagemagick might be needed
+            if (resultObj.getResolutionWidth() == 0) resultObj.setResolutionWidth(getImageWidth(metadata));
+            if (resultObj.getResolutionHeight() == 0) resultObj.setResolutionHeight(getImageHeight(metadata));
 
             if (cameraMaker == null
                     && cameraModel == null
@@ -98,18 +111,30 @@ public class ExtractImageMetadataImpl implements ExtractImageMetadata {
                 return;
             }
 
-            var obj = UploadImageMetadata.builder()
-                    .cameraMaker(cameraMaker)
-                    .cameraModel(cameraModel)
-                    .lensMaker(lensMaker)
-                    .lensModel(lensModel)
-                    .focal(focal)
-                    .shutter(shutter)
-                    .aperture(aperture)
-                    .iso(iso)
-                    .build();
+            if (resultObj.getPhotoMetadata() != null) {
+                UploadImageMetadata data =  resultObj.getPhotoMetadata();
+                if (data.getCameraMaker() == null) data.setCameraMaker(cameraMaker);
+                if (data.getCameraModel() == null) data.setCameraModel(cameraModel);
+                if (data.getLensMaker() == null) data.setLensMaker(lensMaker);
+                if (data.getLensModel() == null) data.setLensModel(lensModel);
+                if (data.getFocal() == null) data.setFocal(focal);
+                if (data.getShutter() == null) data.setShutter(shutter);
+                if (data.getAperture() == null) data.setAperture(aperture);
+                if (data.getIso() == null) data.setIso(iso);
+            } else {
+                var obj = UploadImageMetadata.builder()
+                        .cameraMaker(cameraMaker)
+                        .cameraModel(cameraModel)
+                        .lensMaker(lensMaker)
+                        .lensModel(lensModel)
+                        .focal(focal)
+                        .shutter(shutter)
+                        .aperture(aperture)
+                        .iso(iso)
+                        .build();
 
-            resultObj.setPhotoMetadata(obj);
+                resultObj.setPhotoMetadata(obj);
+            }
 
         } catch (IOException e) {
             log.warn("Error while reading uploaded file");
@@ -127,28 +152,70 @@ public class ExtractImageMetadataImpl implements ExtractImageMetadata {
 
     // Partially from https://github.com/drewnoakes/metadata-extractor/discussions/691
 
-    private @Nullable <T extends Directory> Integer int_(@NotNull Pair<Class<T>, Integer> tag, @NotNull Metadata metadata) {
-        T dir = metadata.getFirstDirectoryOfType(tag.getFirst());
+    private @Nullable <T extends Directory> Integer int_(@NotNull Class<T> dirClass, int tagType, @NotNull Metadata metadata) {
+        T dir = metadata.getFirstDirectoryOfType(dirClass);
         if (dir == null) {
             return null;
         }
-        return dir.getInteger(tag.getSecond());
+        return dir.getInteger(tagType);
     }
 
-    private static final Map<FileType, Pair<Class<? extends Directory>, Integer>> HEIGHT_TAG_MAP = Map.ofEntries(
-            Map.entry(FileType.Png,  Pair.of(PngDirectory.class,   PngDirectory.TAG_IMAGE_HEIGHT)),
-            Map.entry(FileType.Jpeg, Pair.of(JpegDirectory.class, JpegDirectory.TAG_IMAGE_HEIGHT)),
-            Map.entry(FileType.WebP, Pair.of(WebpDirectory.class, WebpDirectory.TAG_IMAGE_HEIGHT)),
-            Map.entry(FileType.Heif, Pair.of(HeifDirectory.class, HeifDirectory.TAG_IMAGE_HEIGHT)),
-            Map.entry(FileType.Tiff, Pair.of(JpegDirectory.class, JpegDirectory.TAG_IMAGE_HEIGHT))
-    );
+    private <T> T coalesce(Supplier<T>... suppliers) {
+        for (Supplier<T> supplier : suppliers) {
+            T answer = supplier.get();
+            if (answer != null) {
+                return answer;
+            }
+        }
+        return null;
+    }
 
-    private static final Map<FileType, Pair<Class<Directory>, Integer>> WIDTH_TAG_MAP = Map.ofEntries(
-            Map.entry(FileType.Png,  Pair.of(PngDirectory.class,   PngDirectory.TAG_IMAGE_WIDTH)),
-            Map.entry(FileType.Jpeg, Pair.of(JpegDirectory.class, JpegDirectory.TAG_IMAGE_WIDTH)),
-            Map.entry(FileType.WebP, Pair.of(WebpDirectory.class, WebpDirectory.TAG_IMAGE_WIDTH)),
-            Map.entry(FileType.Heif, Pair.of(HeifDirectory.class, HeifDirectory.TAG_IMAGE_WIDTH)),
-            Map.entry(FileType.Tiff, Pair.of(JpegDirectory.class, JpegDirectory.TAG_IMAGE_WIDTH))
-    );
+    public Integer getImageHeight(@NotNull Metadata metadata) {
+        return coalesce(
+                () -> int_(JpegDirectory.class, JpegDirectory.TAG_IMAGE_HEIGHT, metadata),
+                () -> int_(PngDirectory.class, PngDirectory.TAG_IMAGE_HEIGHT, metadata),
+                () -> int_(AviDirectory.class, AviDirectory.TAG_HEIGHT, metadata),
+                () -> int_(BmpHeaderDirectory.class, BmpHeaderDirectory.TAG_IMAGE_HEIGHT, metadata),
+                () -> int_(EpsDirectory.class, EpsDirectory.TAG_IMAGE_HEIGHT, metadata),
+                () -> int_(ExifSubIFDDirectory.class, ExifSubIFDDirectory.TAG_EXIF_IMAGE_HEIGHT, metadata),
+                () -> int_(CanonMakernoteDirectory.class, CanonMakernoteDirectory.AFInfo.TAG_IMAGE_HEIGHT, metadata),
+                () -> int_(ExifIFD0Directory.class, ExifDirectoryBase.TAG_IMAGE_HEIGHT, metadata),
+                () -> int_(ExifImageDirectory.class, ExifDirectoryBase.TAG_IMAGE_HEIGHT, metadata),
+                () -> int_(ExifInteropDirectory.class, ExifDirectoryBase.TAG_IMAGE_HEIGHT, metadata),
+                () -> int_(GpsDirectory.class, ExifDirectoryBase.TAG_IMAGE_HEIGHT, metadata),
+                () -> int_(GifImageDirectory.class, GifImageDirectory.TAG_HEIGHT, metadata),
+                () -> int_(HeifDirectory.class, HeifDirectory.TAG_IMAGE_HEIGHT, metadata),
+                () -> int_(IcoDirectory.class, IcoDirectory.TAG_IMAGE_HEIGHT, metadata),
+                () -> int_(KodakMakernoteDirectory.class, KodakMakernoteDirectory.TAG_IMAGE_HEIGHT, metadata),
+                () -> int_(OlympusMakernoteDirectory.class, OlympusMakernoteDirectory.TAG_IMAGE_HEIGHT, metadata),
+                () -> int_(PanasonicMakernoteDirectory.class, PanasonicMakernoteDirectory.TAG_PANASONIC_IMAGE_HEIGHT, metadata),
+                () -> int_(WebpDirectory.class, WebpDirectory.TAG_IMAGE_HEIGHT, metadata),
+                () -> int_(QuickTimeVideoDirectory.class, QuickTimeVideoDirectory.TAG_HEIGHT, metadata)
+        );
+    }
+
+    public Integer getImageWidth(@NotNull Metadata metadata) {
+        return coalesce(
+                () -> int_(JpegDirectory.class, JpegDirectory.TAG_IMAGE_WIDTH, metadata),
+                () -> int_(PngDirectory.class, PngDirectory.TAG_IMAGE_WIDTH, metadata),
+                () -> int_(AviDirectory.class, AviDirectory.TAG_WIDTH, metadata),
+                () -> int_(BmpHeaderDirectory.class, BmpHeaderDirectory.TAG_IMAGE_WIDTH, metadata),
+                () -> int_(EpsDirectory.class, EpsDirectory.TAG_IMAGE_WIDTH, metadata),
+                () -> int_(ExifSubIFDDirectory.class, ExifSubIFDDirectory.TAG_EXIF_IMAGE_WIDTH, metadata),
+                () -> int_(CanonMakernoteDirectory.class, CanonMakernoteDirectory.AFInfo.TAG_IMAGE_WIDTH, metadata),
+                () -> int_(ExifIFD0Directory.class, ExifDirectoryBase.TAG_IMAGE_WIDTH, metadata),
+                () -> int_(ExifImageDirectory.class, ExifDirectoryBase.TAG_IMAGE_WIDTH, metadata),
+                () -> int_(ExifInteropDirectory.class, ExifDirectoryBase.TAG_IMAGE_WIDTH, metadata),
+                () -> int_(GpsDirectory.class, ExifDirectoryBase.TAG_IMAGE_WIDTH, metadata),
+                () -> int_(GifImageDirectory.class, GifImageDirectory.TAG_WIDTH, metadata),
+                () -> int_(HeifDirectory.class, HeifDirectory.TAG_IMAGE_WIDTH, metadata),
+                () -> int_(IcoDirectory.class, IcoDirectory.TAG_IMAGE_WIDTH, metadata),
+                () -> int_(KodakMakernoteDirectory.class, KodakMakernoteDirectory.TAG_IMAGE_WIDTH, metadata),
+                () -> int_(OlympusMakernoteDirectory.class, OlympusMakernoteDirectory.TAG_IMAGE_WIDTH, metadata),
+                () -> int_(PanasonicMakernoteDirectory.class, PanasonicMakernoteDirectory.TAG_PANASONIC_IMAGE_WIDTH, metadata),
+                () -> int_(WebpDirectory.class, WebpDirectory.TAG_IMAGE_WIDTH, metadata),
+                () -> int_(QuickTimeVideoDirectory.class, QuickTimeVideoDirectory.TAG_WIDTH, metadata)
+        );
+    }
 
 }
