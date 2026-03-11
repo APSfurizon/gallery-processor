@@ -4,10 +4,13 @@ import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
 import com.drew.lang.annotations.Nullable;
 import com.drew.metadata.Metadata;
-import com.drew.metadata.exif.*;
+import com.drew.metadata.exif.ExifIFD0Directory;
+import com.drew.metadata.exif.ExifSubIFDDescriptor;
+import com.drew.metadata.exif.ExifSubIFDDirectory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.furizon.gallery_processor.dto.UploadExif;
+import net.furizon.gallery_processor.dto.upload.UploadData;
+import net.furizon.gallery_processor.dto.upload.UploadExif;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -19,11 +22,11 @@ import java.util.TimeZone;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ExtractEfixImpl implements  ExtractExif {
+public class ExtractEfixImpl implements ExtractExif {
     private static final ZoneId GMT =  ZoneId.of("GMT");
 
     @Override
-    public UploadExif parseExif(String path) {
+    public UploadData parseExif(String path) {
         try {
             Metadata metadata = ImageMetadataReader.readMetadata(new File(path));
 

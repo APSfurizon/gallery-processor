@@ -1,7 +1,7 @@
 package net.furizon.gallery_processor.utils.extractExif;
 
-import net.furizon.gallery_processor.dto.UploadExif;
+import net.furizon.gallery_processor.dto.upload.UploadData;
 
 public interface ExtractExif {
-    UploadExif parseExif(String path);
+    UploadData parseExif(String path);
 }
