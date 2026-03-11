@@ -1,7 +1,8 @@
 package net.furizon.gallery_processor.utils.extractExif;
 
-import net.furizon.gallery_processor.dto.upload.UploadData;
+import com.drew.lang.annotations.NotNull;
+import net.furizon.gallery_processor.dto.upload.GalleryProcessorUploadData;
 
 public interface ExtractExif {
-    UploadData parseExif(String path);
+    void parseExif(@NotNull String path, @NotNull GalleryProcessorUploadData resultObj);
 }

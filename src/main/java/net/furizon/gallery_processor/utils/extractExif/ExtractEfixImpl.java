@@ -2,6 +2,7 @@ package net.furizon.gallery_processor.utils.extractExif;
 
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
+import com.drew.lang.annotations.NotNull;
 import com.drew.lang.annotations.Nullable;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifIFD0Directory;
@@ -9,8 +10,8 @@ import com.drew.metadata.exif.ExifSubIFDDescriptor;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.furizon.gallery_processor.dto.upload.UploadData;
-import net.furizon.gallery_processor.dto.upload.UploadExif;
+import net.furizon.gallery_processor.dto.upload.GalleryProcessorUploadData;
+import net.furizon.gallery_processor.dto.upload.UploadImageMetadata;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -26,7 +27,7 @@ public class ExtractEfixImpl implements ExtractExif {
     private static final ZoneId GMT =  ZoneId.of("GMT");
 
     @Override
-    public UploadData parseExif(String path) {
+    public void parseExif(@NotNull String path, @NotNull GalleryProcessorUploadData resultObj) {
         try {
             Metadata metadata = ImageMetadataReader.readMetadata(new File(path));
 
@@ -81,10 +82,10 @@ public class ExtractEfixImpl implements ExtractExif {
                     && aperture == null
                     && iso == null
                     && shotTime == null) {
-                return null;
+                return;
             }
 
-            return UploadExif.builder()
+            var obj = UploadImageMetadata.builder()
                     .cameraMaker(cameraMaker)
                     .cameraModel(cameraModel)
                     .lensMaker(lensMaker)
@@ -93,15 +94,16 @@ public class ExtractEfixImpl implements ExtractExif {
                     .shutter(shutter)
                     .aperture(aperture)
                     .iso(iso)
-                    .shotTimestamp(shotTime)
-                .build();
+                    .build();
+
+            resultObj.setPhotoMetadata(obj);
+            resultObj.setShotTimestamp(shotTime);
 
         } catch (IOException e) {
             log.warn("Error while reading uploaded file");
         } catch (ImageProcessingException e) {
             log.warn("Error while parsing uploaded file's metadata");
         }
-        return null;
     }
 
     @Nullable

@@ -1,14 +1,12 @@
 package net.furizon.gallery_processor.dto.upload;
 
+import lombok.Builder;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.experimental.SuperBuilder;
 import org.jetbrains.annotations.Nullable;
 
 @Data
-@SuperBuilder
-@EqualsAndHashCode(callSuper = true)
-public class UploadVideo extends UploadData {
+@Builder
+public class UploadVideoMetadata {
     @Nullable private String audioFrequency;
     @Nullable private String videoCodec;
     @Nullable private String audioCodec;
