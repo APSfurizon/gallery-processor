@@ -1,9 +1,7 @@
 package net.furizon.gallery_processor.utils.jobworker;
 
 import com.drew.imaging.FileType;
-import com.drew.imaging.FileTypeDetector;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.furizon.gallery_processor.dto.JobType;
