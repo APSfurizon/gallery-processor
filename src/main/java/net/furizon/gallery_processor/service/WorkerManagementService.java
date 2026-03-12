@@ -53,8 +53,6 @@ public class WorkerManagementService {
                         //Skip jobs we already processed in this invocation
                         if (invocationProcessedJobs.add(jobId)) {
                             foundNewJob = true;
-                            //Update retries
-                            jobRepository.save(job.incRetries());
 
                             //Proper processing
                             boolean result = jobWorker.work(job);
@@ -66,6 +64,8 @@ public class WorkerManagementService {
                         } else log.info("Job {} has already been processed in this invocation. Skipping", jobId);
                     } catch (Exception e) {
                         log.error("Exception {} occurred while working on job {}", e.getMessage(), jobId, e);
+                        //Update retries
+                        jobRepository.save(job.incRetries());
                     }
                 }
             } while (!jobs.isEmpty() && foundNewJob);
