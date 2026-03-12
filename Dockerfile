@@ -7,7 +7,7 @@ COPY application-*.jar $APP_HOME/application.jar
 COPY libs/ $APP_HOME/libs/
 
 
-RUN apk --no-cache -s upgrade && apk --no-cache upgrade && apk add musl-locales && apk add lang
+RUN apk --no-cache -s upgrade && apk --no-cache upgrade && apk add ffmpeg
 
 WORKDIR $APP_HOME
 
