@@ -16,12 +16,13 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class FfmpegImpls implements Ffmpeg {
+public class FfmpegImpl implements Ffmpeg {
     @NotNull
     private final CmdExecutor cmdExecutor;
 
@@ -38,9 +39,6 @@ public class FfmpegImpls implements Ffmpeg {
     @Value("${worker.quality}")
     private Integer quality;
 
-    //ffprobe -v error -show_entries "format=duration,start_time:stream=codec_name,codec_type,sample_rate,avg_frame_rate,width,height" -of json 01072025-021448_2118.mp4
-    //ffmpeg -y -v error -ss 00:00:02 -i input_file.mp4 -vframes 1 -vcodec libwebp -lossless 0 -compression_level 6 -q:v 80 -pix_fmt yuv420p output.webp
-
     @Override
     public void extractMetadata(@NotNull Path file, @NotNull FileType fileType, @NotNull GalleryProcessorUploadData data) throws IOException {
         log.info("Extracting metadata from file {}", file);
@@ -48,7 +46,7 @@ public class FfmpegImpls implements Ffmpeg {
             "FFMPEG_EXTRACTMETADATA",
                 ffprobeBinary,
                 "-v", "error",
-                "-show_entries", "format=duration,start_time:stream=codec_name,codec_type,sample_rate,avg_frame_rate,width,height",
+                "-show_entries", "format_tags=creation_time:format=duration,start_time:stream=codec_name,codec_type,sample_rate,avg_frame_rate,width,height",
                 "-of", "json",
                 file.toAbsolutePath().toString()
         );
@@ -64,10 +62,15 @@ public class FfmpegImpls implements Ffmpeg {
         Integer width = null;
         Integer height = null;
         Integer duration = null;
+        LocalDateTime shotTs = null;
 
         FfmpegFormat format = output.getFormat();
         if (format != null) {
-            duration = output.getFormat().getDurationMs();
+            duration = format.getDurationMs();
+            FfmpegFormat.Tags tags = format.getTags();
+            if (tags != null) {
+                shotTs = tags.getCreationTime();
+            }
         }
 
         List<FfmpegStream> streams = output.getStreams();
@@ -86,12 +89,14 @@ public class FfmpegImpls implements Ffmpeg {
                         frameRate = stream.getFrameRate();
                         break;
                     }
+                    default: break;
                 }
             }
         }
 
         if (data.getResolutionWidth() == 0 && width != null) data.setResolutionWidth(width);
         if (data.getResolutionHeight() == 0 && height != null) data.setResolutionHeight(height);
+        if (data.getShotTimestamp() == null) data.setShotTimestamp(shotTs);
 
         if (audioFrequency == null
                 && videoCodec == null

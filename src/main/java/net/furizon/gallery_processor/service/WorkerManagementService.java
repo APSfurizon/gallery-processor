@@ -6,11 +6,14 @@ import net.furizon.gallery_processor.entity.Job;
 import net.furizon.gallery_processor.repository.JobRepository;
 import net.furizon.gallery_processor.utils.jobworker.JobWorker;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -24,6 +27,9 @@ public class WorkerManagementService {
     @NotNull
     private final JobWorker jobWorker;
 
+    @Value("${worker.max-retries}")
+    private int maxRetries;
+
     private final AtomicReference<Boolean> working = new AtomicReference<>(false);
 
     @Scheduled(fixedRateString = "${worker.delay}", timeUnit = TimeUnit.SECONDS)
@@ -35,21 +41,34 @@ public class WorkerManagementService {
                 return;
             }
 
+            Set<Long> invocationProcessedJobs = new HashSet<>();
+            boolean foundNewJob;
             List<Job> jobs;
             do {
-                jobs = jobRepository.findAllByResultIsNullOrderBySubmittedAtAsc();
-                jobs.forEach(job -> {
+                foundNewJob = false;
+                jobs = jobRepository.findAllByResultIsNullAndRetriesLessThanOrderBySubmittedAtAsc(maxRetries);
+                for(@NotNull Job job : jobs) {
+                    long jobId = job.getId();
                     try {
-                        boolean result = jobWorker.work(job);
-                        if (!result) {
-                            log.warn("Job {} failed. Deleting it", job.getId());
-                            jobRepository.delete(job);
-                        }
+                        //Skip jobs we already processed in this invocation
+                        if (invocationProcessedJobs.add(jobId)) {
+                            foundNewJob = true;
+                            //Update retries
+                            jobRepository.save(job.incRetries());
+
+                            //Proper processing
+                            boolean result = jobWorker.work(job);
+                            if (!result) {
+                                log.warn("Job {} failed. Will not retry...", jobId);
+                                job.setRetries(Integer.MAX_VALUE);
+                                jobRepository.save(job);
+                            }
+                        } else log.info("Job {} has already been processed in this invocation. Skipping", jobId);
                     } catch (Exception e) {
-                        log.error("Exception {} occurred while working on job {}", e.getMessage(), job.getId(), e);
+                        log.error("Exception {} occurred while working on job {}", e.getMessage(), jobId, e);
                     }
-                });
-            } while (!jobs.isEmpty());
+                }
+            } while (!jobs.isEmpty() && foundNewJob);
         } finally {
             working.set(false);
         }

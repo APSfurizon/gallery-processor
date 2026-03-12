@@ -76,26 +76,15 @@ public class ImageMagickImpl implements ImageMagick {
                 getFullSourceFIle(source, originalFileType)
             );
         String sp[] = size.split("x");
-        if (data.getResolutionWidth() == 0) data.setResolutionWidth(Integer.parseInt(sp[0]));
-        if (data.getResolutionHeight() == 0) data.setResolutionHeight(Integer.parseInt(sp[1]));
+        if (sp.length >= 2) {
+            if (data.getResolutionWidth() == 0) data.setResolutionWidth(Integer.parseInt(sp[0]));
+            if (data.getResolutionHeight() == 0) data.setResolutionHeight(Integer.parseInt(sp[1]));
+        }
     }
 
     @Override
     public void createThumbnail(@NotNull Path source, @NotNull Path dest, int width, int height, @NotNull FileType originalFileType) throws IOException {
         log.info("Creating thumbnail from {} to {}", source, dest);
-        /*cmdExecutor.execute(
-                "IMAGEMAGICK_THUMBNAIL",
-                imagemagickBinary == null ? "convert" : imagemagickBinary,
-                getFullSourceFIle(source, originalFileType),
-                "-resize", "400x400^>",       // do not upscale small images
-                "-gravity", "center",
-                "-background", "white",
-                "-extent", "400x400",         // pad if needed
-                "-alpha", "off",
-                "-quality", "85",
-                "-define", "webp:preserve-metadata=all",
-                dest.toAbsolutePath().toString()
-        );*/
         int dimension = Math.max(Math.min(Math.min(width, height),  thumbnailMaxDimension),  thumbnailMinDimension);
         String dimStr = String.valueOf(dimension);
         cmdExecutor.execute(

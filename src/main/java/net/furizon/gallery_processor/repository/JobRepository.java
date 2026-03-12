@@ -11,5 +11,5 @@ import java.util.Optional;
 @Repository
 public interface JobRepository extends CrudRepository<Job, Long> {
     Optional<Job> findFirstByResultIsNullOrderBySubmittedAtAsc();
-    List<Job> findAllByResultIsNullOrderBySubmittedAtAsc();
+    List<Job> findAllByResultIsNullAndRetriesLessThanOrderBySubmittedAtAsc(int retries);
 }

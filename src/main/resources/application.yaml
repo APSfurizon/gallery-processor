@@ -37,6 +37,7 @@ springdoc:
 
 worker:
   delay: ${WORKER_DELAY:20}
+  max-retries: ${WORKER_JOB_MAX_RETRIES:5}
   quality: ${THUMBNAIL_QUALITY:85}
   render-prefix: ${THUMBNAIL_REDER_PREFIX:rend_}
   thumbnail-prefix: ${THUMBNAIL_REDER_PREFIX:thumb_}

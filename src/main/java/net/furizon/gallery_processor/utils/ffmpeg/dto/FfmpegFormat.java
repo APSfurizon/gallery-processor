@@ -5,6 +5,9 @@ import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Value;
+
+import java.time.LocalDateTime;
 
 @Data
 public class FfmpegFormat {
@@ -16,6 +19,9 @@ public class FfmpegFormat {
     @Nullable
     @Getter(AccessLevel.NONE)
     private final String duration;
+
+    @Nullable
+    private final Tags tags;
 
     public @Nullable Float getStartTime() {
         if (startTime == null) return null;
@@ -35,5 +41,19 @@ public class FfmpegFormat {
         Float duration = getDuration();
         if (duration == null) return null;
         return (int)(duration * 1000.0);
+    }
+
+    @Data
+    public static class Tags {
+        @Nullable
+        @Value("creation_time")
+        @Getter(AccessLevel.NONE)
+        private final String creationTime;
+
+        public @Nullable LocalDateTime getCreationTime() {
+            if (creationTime == null) return null;
+            if  (creationTime.isEmpty()) return null;
+            return LocalDateTime.parse(creationTime);
+        }
     }
 }

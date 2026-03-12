@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.furizon.gallery_processor.dto.JobType;
 import net.furizon.gallery_processor.dto.upload.GalleryProcessorUploadData;
+import net.furizon.gallery_processor.dto.upload.UploadVideoMetadata;
 import net.furizon.gallery_processor.entity.Job;
 import net.furizon.gallery_processor.infrastructure.s3.actions.directDownload.S3DirectDownload;
 import net.furizon.gallery_processor.infrastructure.s3.actions.directUpload.S3DirectUpload;
@@ -138,18 +139,24 @@ public class JobWorkerImpl implements JobWorker {
                     needsRender
                 );
             } else {
-                // If video, extract first frame as (resized) thumbnail, video codec, audio codec, audio freq, framerate, length, timestamp, resolution
-
+                // If video, extract first frame as (resized) thumbnail, render, video codec, audio codec, audio freq, framerate, length, timestamp, resolution
+                result = handleVideo(
+                        job,
+                        tempFile,
+                        fileName,
+                        data,
+                        fileType
+                );
             }
             if (!result) {
                 log.error("[{}] Inner function returned false!", jobId);
                 return false;
             }
 
-            job.setResult(objectMapper.writeValueAsString(dataBuilder.build()));
+            job.setResult(objectMapper.writeValueAsString(data));
         } catch (IOException e) {
             log.error("IOException while working on job {}", job.getId(), e);
-            return false;
+            return true;
         } catch (NoSuchKeyException e) {
             log.error("NoSuchKey while working on job {}", job.getId(), e);
             return false;
@@ -172,7 +179,7 @@ public class JobWorkerImpl implements JobWorker {
                                 @NotNull FileType fileType,
                                 boolean needsRender) throws IOException {
         final String tempFileName = tempFile.getFileName().toString();
-        long jobId = job.getId();
+        final long jobId = job.getId();
         //First round of pass, trying to get as much metadata as possible
         log.debug("[{}] First pass of exif", jobId);
         extractImageMetadata.parseExif(tempFile, data, fileType);
@@ -237,8 +244,60 @@ public class JobWorkerImpl implements JobWorker {
 
     private boolean handleVideo(@NotNull Job job,
                                 @NotNull Path tempFile,
+                                @NotNull String fileName,
                                 @NotNull GalleryProcessorUploadData data,
-                                @NotNull FileType fileType) {
+                                @NotNull FileType fileType) throws IOException {
+        final String tempFileName = tempFile.getFileName().toString();
+        final long jobId = job.getId();
+        Path render = null;
+        Path thumbnail = null;
+        try {
+            render = Files.createTempFile("rend_", tempFileName);
+            thumbnail = Files.createTempFile("thumb_", tempFileName);
+            log.info("[{}] Render tempfile: {}, Thumbnail tempfile: {}", jobId, render, thumbnail);
+
+            //Get video metadata
+            log.debug("[{}] Extracting metadata from video", jobId);
+            ffmpeg.extractMetadata(tempFile, fileType, data);
+
+            //Extract render frame
+            log.debug("[{}] Extracting render frame from video", jobId);
+            UploadVideoMetadata videoMetadata = data.getVideoMetadata();
+            Integer duration = videoMetadata == null ? null : videoMetadata.getDuration();
+            ffmpeg.extractFirstFrame(tempFile, render, fileType, duration == null ? 0 : duration);
+
+            //If somehow we still don't have width and height, get it from the render
+            if (data.getResolutionWidth() == 0 || data.getResolutionHeight() == 0) {
+                log.debug("[{}] Trying to extract width and height from rendered frame", jobId);
+                imageMagick.getWidthAndHeight(render, FileType.WebP, data);
+            }
+
+            //From the render frame extract thumbnail
+            log.debug("[{}] Extracting thumbnail", jobId);
+            imageMagick.createThumbnail(
+                    render,
+                    thumbnail,
+                    data.getResolutionWidth(),
+                    data.getResolutionHeight(),
+                    fileType
+            );
+
+            //Upload thumbnail and render frame
+            log.info("[{}] Uploading render {}", jobId, thumbnail);
+            final String renderKey = renderPrefix + fileName;
+            s3DirectUpload.upload(renderKey, render);
+            data.setRenderedMediaName(renderKey);
+
+            log.info("[{}] Uploading thumbnail {}", jobId, thumbnail);
+            final String thumbnailKey = thumbnailPrefix + fileName;
+            s3DirectUpload.upload(thumbnailKey, thumbnail);
+            data.setThumbnailMediaName(thumbnailKey);
+
+        } finally {
+            if (render != null) Files.deleteIfExists(render);
+            if (thumbnail != null) Files.deleteIfExists(thumbnail);
+        }
+
         return true;
     }
 }

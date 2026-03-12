@@ -6,7 +6,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Null;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
@@ -34,8 +33,17 @@ public class Job {
     @Null
     private String result;
 
+    @Column(columnDefinition = "integer default 0")
+    @Positive
+    private int retries = 0;
+
     @Null
     private JobType type;
+
+    public Job incRetries() {
+        this.retries++;
+        return this;
+    }
 
     public Job(Long id, String name, long submittedAt) {
         this.id = id;
