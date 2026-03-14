@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.furizon.gallery_processor.entity.Job;
 import net.furizon.gallery_processor.repository.JobRepository;
+import net.furizon.gallery_processor.utils.jobCompletedWebhook.JobCompletedWebhook;
 import net.furizon.gallery_processor.utils.jobworker.JobWorker;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +27,9 @@ public class WorkerManagementService {
 
     @NotNull
     private final JobWorker jobWorker;
+
+    @NotNull
+    private final JobCompletedWebhook jobCompletedWebhook;
 
     @Value("${worker.max-retries}")
     private int maxRetries;
@@ -57,7 +61,8 @@ public class WorkerManagementService {
                             //Proper processing
                             boolean result = jobWorker.work(job);
                             if (result) {
-
+                                log.info("Job {} has been successfully executed", jobId);
+                                jobCompletedWebhook.invoke(job);
                             } else {
                                 log.warn("Job {} failed. Will not retry...", jobId);
                                 job.setRetries(Integer.MAX_VALUE);
