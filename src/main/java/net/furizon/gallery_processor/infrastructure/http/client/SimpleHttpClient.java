@@ -2,6 +2,7 @@ package net.furizon.gallery_processor.infrastructure.http.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.mutable.MutableObject;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.ClientHttpResponse;
@@ -77,6 +78,10 @@ public class SimpleHttpClient implements HttpClient {
                 }
                 if (!request.getHeaders().isEmpty()) {
                     headers.addAll(request.getHeaders());
+                }
+                Pair<String, String> basicAuth = request.isBasicAuthSet() ? request.getBasicAuth() : config.basicAuth();
+                if (basicAuth != null) {
+                    headers.setBasicAuth(basicAuth.getLeft(), basicAuth.getRight());
                 }
             });
 
