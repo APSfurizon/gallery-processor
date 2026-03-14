@@ -82,21 +82,11 @@ public class JobController {
         Optional<Job> res = jobRepository.findById(jobId);
         if (res.isPresent()) {
             log.info("Retrieving job {} from the queue", jobId);
-            Job job = res.get();
-
-            var jobResult = job.getResult();
-            JobType jobType = job.getType();
-            JobStatus status = jobResult == null ? JobStatus.PENDING : JobStatus.DONE;
-            if (jobType == JobType.UNKNOWN) status = JobStatus.FAILED;
-            if (job.getRetries() >= jobMaxRetries) status = JobStatus.FAILED;
-
-            return JobResponse.builder()
-                    .id(jobId)
-                    .file(job.getName())
-                    .status(status)
-                    .type(job.getType())
-                    .result(jobResult == null || jobType == JobType.UNKNOWN ? null : objectMapper.readValue(jobResult, GalleryProcessorUploadData.class))
-                .build();
+            return JobResponse.map(
+                    res.get(),
+                    jobMaxRetries,
+                    objectMapper
+            );
         }
         log.info("Job {} not found in queue", jobId);
         //response.setStatus(HttpServletResponse.SC_NOT_FOUND);

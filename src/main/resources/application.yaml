@@ -36,9 +36,13 @@ springdoc:
     enabled: ${DOCS_ENABLED:false}
 
 worker:
-  delay: ${WORKER_DELAY:20}
+  delay: ${WORKER_DELAY_SECS:20}
   max-retries: ${WORKER_JOB_MAX_RETRIES:5}
   quality: ${THUMBNAIL_QUALITY:85}
+  job-completed-webhook:
+    user: ${JOB_COMPLETED_WEBHOOK_USER:changeme}
+    password: ${JOB_COMPLETED_WEBHOOK_PASSWORD:changeme}
+    url: ${JOB_COMPLETED_WEBHOOK_URL:}
   render-prefix: ${THUMBNAIL_REDER_PREFIX:rend_}
   thumbnail-prefix: ${THUMBNAIL_REDER_PREFIX:thumb_}
   thumbnail:

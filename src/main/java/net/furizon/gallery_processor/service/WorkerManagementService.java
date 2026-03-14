@@ -56,7 +56,9 @@ public class WorkerManagementService {
 
                             //Proper processing
                             boolean result = jobWorker.work(job);
-                            if (!result) {
+                            if (result) {
+
+                            } else {
                                 log.warn("Job {} failed. Will not retry...", jobId);
                                 job.setRetries(Integer.MAX_VALUE);
                                 jobRepository.save(job);

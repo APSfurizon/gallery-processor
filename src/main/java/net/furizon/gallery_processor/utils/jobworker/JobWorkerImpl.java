@@ -65,7 +65,7 @@ public class JobWorkerImpl implements JobWorker {
         try {
             String fullFileName = job.getName();
             String fileName = FilenameUtils.getName(fullFileName);
-            String extension = FilenameUtils.getExtension(fullFileName);
+            String extension = "." + FilenameUtils.getExtension(fullFileName);
             tempFile = Files.createTempFile(null, extension);
             log.info("[{}] Creating temp file {}", jobId, tempFile);
 
@@ -115,7 +115,7 @@ public class JobWorkerImpl implements JobWorker {
             }
 
             var dataBuilder = GalleryProcessorUploadData.builder();
-            job.setType(isPhoto ? JobType.IMGAGE : JobType.VIDEO);
+            job.setType(isPhoto ? JobType.IMAGE : JobType.VIDEO);
 
             //Extract filesize, hash, content type extracted already
             log.debug("[{}] Loading hash of file", jobId);
