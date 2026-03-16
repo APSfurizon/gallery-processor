@@ -62,7 +62,11 @@ public class WorkerManagementService {
                             boolean result = jobWorker.work(job);
                             if (result) {
                                 log.info("Job {} has been successfully executed", jobId);
-                                jobCompletedWebhook.invoke(job);
+                                try {
+                                    jobCompletedWebhook.invoke(job);
+                                } catch (Exception e) {
+                                    log.warn("Exception while calling webhook for job {}", jobId, e);
+                                }
                             } else {
                                 log.warn("Job {} failed. Will not retry...", jobId);
                                 job.setRetries(Integer.MAX_VALUE);

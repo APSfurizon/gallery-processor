@@ -17,6 +17,9 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 
 @Slf4j
@@ -62,14 +65,17 @@ public class FfmpegImpl implements Ffmpeg {
         Integer width = null;
         Integer height = null;
         Integer duration = null;
-        LocalDateTime shotTs = null;
+        OffsetDateTime shotTs = null;
 
         FfmpegFormat format = output.getFormat();
         if (format != null) {
             duration = format.getDurationMs();
             FfmpegFormat.Tags tags = format.getTags();
             if (tags != null) {
-                shotTs = tags.getCreationTime();
+                LocalDateTime shot = tags.getCreationTime();
+                if (shot != null) {
+                    shotTs = shot.atOffset(ZoneOffset.ofHours(0));
+                }
             }
         }
 

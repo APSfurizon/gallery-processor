@@ -37,6 +37,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.TimeZone;
 import java.util.function.Supplier;
@@ -61,7 +62,7 @@ public class ExtractImageMetadataImpl implements ExtractImageMetadata {
             String shutter = null;
             String aperture = null;
             String iso = null;
-            LocalDateTime shotTime = null;
+            OffsetDateTime shotTime = null;
 
             var subIfdDir = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
             if (subIfdDir != null) {
@@ -76,7 +77,7 @@ public class ExtractImageMetadataImpl implements ExtractImageMetadata {
                 ZoneId zoneId = zone == null ? GMT : zone.toZoneId();
                 var date = subIfdDir.getDateOriginal();
                 if (date != null) {
-                    shotTime = LocalDateTime.ofInstant(date.toInstant(), zoneId);
+                    shotTime = OffsetDateTime.ofInstant(date.toInstant(), zoneId);
                 }
 
                 lensMaker = subIfdDir.getString(ExifIFD0Directory.TAG_LENS_MAKE);
