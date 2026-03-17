@@ -43,9 +43,12 @@ worker:
     user: ${JOB_COMPLETED_WEBHOOK_USER:changeme}
     password: ${JOB_COMPLETED_WEBHOOK_PASSWORD:changeme}
     url: ${JOB_COMPLETED_WEBHOOK_URL:}
-  render-prefix: ${THUMBNAIL_REDER_PREFIX:rend_}
-  thumbnail-prefix: ${THUMBNAIL_REDER_PREFIX:thumb_}
+  render:
+    prefix: ${RENDER_REDER_PREFIX:rend_}
+    max-dimension-width: ${RENDER_MAX_WIDTH:3840}
+    max-dimension-height: ${RENDER_MAX_HEIGHT:2160}
   thumbnail:
+    prefix: ${THUMBNAIL_REDER_PREFIX:thumb_}
     max-dimension: ${THUMBNAIL_DIMENSION:512}
     min-dimension: ${THUMBNAIL_DIMENSION:128}
     video-max-seek: ${THUMBNAIL_VIDEO_MAX_SEEK_SEC:3}

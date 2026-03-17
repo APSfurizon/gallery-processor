@@ -19,7 +19,6 @@ import org.apache.commons.io.FilenameUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.util.MimeType;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 import java.io.IOException;
@@ -52,9 +51,9 @@ public class JobWorkerImpl implements JobWorker {
     @NotNull
     private final ObjectMapper objectMapper;
 
-    @Value("${worker.render-prefix}")
+    @Value("${worker.render.prefix}")
     private String renderPrefix;
-    @Value("${worker.thumbnail-prefix}")
+    @Value("${worker.thumbnail.prefix}")
     private String thumbnailPrefix;
 
     @Override

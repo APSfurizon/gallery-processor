@@ -31,6 +31,11 @@ public class ImageMagickImpl implements ImageMagick {
     @Value("${worker.thumbnail.min-dimension}")
     private int thumbnailMinDimension;
 
+    @Value("${worker.render.max-dimension-width}")
+    private int renderMaxWidth;
+    @Value("${worker.render.max-dimension-height}")
+    private int renderMaxHeight;
+
     @NotNull
     @Value("${worker.quality}")
     private Integer quality = 1;
@@ -51,6 +56,7 @@ public class ImageMagickImpl implements ImageMagick {
             "IMAGEMAGICK_RENDERTOWEBP",
             imagemagickBinary == null ? "convert" : imagemagickBinary,
             getFullSourceFIle(source, originalFileType),
+            "-resize", renderMaxWidth + "x" + renderMaxHeight + ">",
             "-alpha", "off",
             "-quality", quality.toString(),
             "-define", "webp:preserve-metadata=all",
@@ -91,7 +97,7 @@ public class ImageMagickImpl implements ImageMagick {
                 "IMAGEMAGICK_THUMBNAIL",
                 imagemagickBinary == null ? "convert" : imagemagickBinary,
                 getFullSourceFIle(source, originalFileType),
-                "-resize", dimStr + "x" + dimStr + "^",
+                "-thumbnail", dimStr + "x" + dimStr + "^",
                 "-gravity", "center",
                 "-crop", dimStr + "x" + dimStr + "+0+0", "+repage",
                 "-alpha", "off",

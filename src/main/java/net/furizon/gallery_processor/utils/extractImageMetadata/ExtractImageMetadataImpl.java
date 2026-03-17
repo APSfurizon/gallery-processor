@@ -7,7 +7,6 @@ import com.drew.lang.annotations.NotNull;
 import com.drew.lang.annotations.Nullable;
 import com.drew.metadata.Directory;
 import com.drew.metadata.Metadata;
-import com.drew.metadata.Tag;
 import com.drew.metadata.avi.AviDirectory;
 import com.drew.metadata.bmp.BmpHeaderDirectory;
 import com.drew.metadata.eps.EpsDirectory;
@@ -37,7 +36,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.TimeZone;
@@ -55,9 +53,9 @@ public class ExtractImageMetadataImpl implements ExtractImageMetadata {
             log.info("Parsing metadata from {}", file);
             Metadata metadata = ImageMetadataReader.readMetadata(file.toFile());
 
-            for (Directory directory : metadata.getDirectories())
-                for (Tag tag : directory.getTags())
-                    log.info("[{}] {} {}: {}", tag.getDirectoryName(), tag.getTagTypeHex(), tag.getTagName(), tag.getDescription());
+            //for (Directory directory : metadata.getDirectories())
+            //    for (Tag tag : directory.getTags())
+            //        log.info("[{}] {} {}: {}", tag.getDirectoryName(), tag.getTagTypeHex(), tag.getTagName(), tag.getDescription());
 
             String cameraMaker = null;
             String cameraModel = null;

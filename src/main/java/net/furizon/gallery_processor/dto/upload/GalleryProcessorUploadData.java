@@ -5,12 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.util.MimeTypeUtils;
-import software.amazon.awssdk.core.internal.util.Mimetype;
 
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 @Data
 @Builder
