@@ -56,6 +56,9 @@ s3:
   endpoint: ${S3_ENDPOINT:}
   region: ${S3_REGION:changeme}
   bucket: ${S3_BUCKET:changeme}
+  bucket-path-style: ${S3_BUCKET_PATH_STYLE:false}
+  multipart-size: ${S3_MULTIPART_PART_SIZE:6291456} #6 MB
+  presign-expiration-mins: ${S3_PRESIGN_EXPIRATION_MINS:15}
 
 cmd-executor:
   imagemagick-binary: ${CMD_IMAGEMAGICK_BINARY:}

@@ -25,7 +25,9 @@ public class S3DirectDownloadImpl implements S3DirectDownload {
     @NotNull
     private final S3Config s3Config;
 
-    private Object download(@NotNull String key, @NotNull ResponseTransformer<GetObjectResponse, ?> responseTransformer) throws NoSuchKeyException {
+    private Object download(@NotNull String key,
+                            @NotNull ResponseTransformer<GetObjectResponse, ?> responseTransformer)
+            throws NoSuchKeyException {
         log.info("Getting object for key {}", key);
         return s3.getObject(request ->
             request
