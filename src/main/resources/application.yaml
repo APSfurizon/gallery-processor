@@ -63,6 +63,6 @@ s3:
 cmd-executor:
   imagemagick-binary: ${CMD_IMAGEMAGICK_BINARY:}
   ffmpeg-binary: ${CMD_FFMPEG_BINARY:ffmpeg}
-  ffprobe-binary: ${CMD_FFPROBE_BINARY:ffmpeg}
-  timeout: ${CMD_TIMEOUT_SECS:10}
+  ffprobe-binary: ${CMD_FFPROBE_BINARY:ffprobe}
+  timeout: ${CMD_TIMEOUT_SECS:30}
 

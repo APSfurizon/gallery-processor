@@ -72,30 +72,23 @@ public class FfmpegImpl implements Ffmpeg {
             duration = format.getDurationMs();
             FfmpegFormat.Tags tags = format.getTags();
             if (tags != null) {
-                LocalDateTime shot = tags.getCreationTime();
-                if (shot != null) {
-                    shotTs = shot.atOffset(ZoneOffset.ofHours(0));
-                }
+                shotTs = tags.getCreationTime();
             }
         }
 
         List<FfmpegStream> streams = output.getStreams();
         if (streams != null) {
             for (FfmpegStream stream : streams) {
-                switch (stream.getCodecType()) {
-                    case audio: {
-                        audioCodec = stream.getCodecName();
-                        audioFrequency = stream.getSampleRate();
-                        break;
-                    }
-                    case video: {
-                        videoCodec = stream.getCodecName();
-                        width = stream.getWidth();
-                        height = stream.getHeight();
-                        frameRate = stream.getFrameRate();
-                        break;
-                    }
-                    default: break;
+                String codecType = stream.getCodecType();
+                if (codecType.equalsIgnoreCase("audio")) {
+                    audioCodec = stream.getCodecName();
+                    audioFrequency = stream.getSampleRate();
+                }
+                if (codecType.equalsIgnoreCase("video")) {
+                    videoCodec = stream.getCodecName();
+                    width = stream.getWidth();
+                    height = stream.getHeight();
+                    frameRate = stream.getFrameRate();
                 }
             }
         }
@@ -114,13 +107,14 @@ public class FfmpegImpl implements Ffmpeg {
         }
 
         if (data.getVideoMetadata() == null) {
-            UploadVideoMetadata.builder()
+            var metadata = UploadVideoMetadata.builder()
                     .audioFrequency(audioFrequency)
                     .videoCodec(videoCodec)
                     .audioCodec(audioCodec)
                     .framerate(frameRate)
                     .duration(duration == null ? 0 : duration)
                 .build();
+            data.setVideoMetadata(metadata);
         } else {
             UploadVideoMetadata videoData = data.getVideoMetadata();
             if (videoData.getAudioFrequency() == null) videoData.setAudioFrequency(audioCodec);

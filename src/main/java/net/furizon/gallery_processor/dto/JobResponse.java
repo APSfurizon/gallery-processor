@@ -31,7 +31,7 @@ public class JobResponse {
         var jobResult = job.getResult();
         JobType jobType = job.getType();
         JobStatus status = jobResult == null ? JobStatus.PENDING : JobStatus.DONE;
-        if (jobType == JobType.UNKNOWN) status = JobStatus.FAILED;
+        //if (jobType == JobType.UNKNOWN) status = JobStatus.FAILED;
         if (job.getRetries() >= jobMaxRetries) status = JobStatus.FAILED;
 
         return JobResponse.builder()

@@ -13,6 +13,7 @@ import net.furizon.gallery_processor.infrastructure.http.client.HttpClient;
 import net.furizon.gallery_processor.infrastructure.http.client.HttpRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 
@@ -46,6 +47,7 @@ public class JobCompletedWebhookImpl implements JobCompletedWebhook {
             .method(HttpMethod.POST)
             .path("")
             .overrideBaseUrl(endpoint)
+            .contentType(MediaType.APPLICATION_JSON)
             .body(JobResponse.map(job, maxRetries, objectMapper))
             .responseType(Boolean.class)
             .basicAuth(user, password)

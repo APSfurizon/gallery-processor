@@ -38,13 +38,13 @@ public class WorkerManagementService {
 
     @Scheduled(fixedRateString = "${worker.delay}", timeUnit = TimeUnit.SECONDS)
     public void run(){
+        boolean isWorking = working.getAndSet(true);
+        if(isWorking){
+            log.debug("Already working on some requests");
+            return;
+        }
         try {
-            boolean isWorking = working.getAndSet(true);
-            if(isWorking){
-                log.debug("Already working on some requests");
-                return;
-            }
-
+            //log.debug("Searching for new jobs");
             Set<Long> invocationProcessedJobs = new HashSet<>();
             boolean foundNewJob;
             List<Job> jobs;
@@ -61,9 +61,10 @@ public class WorkerManagementService {
                             //Proper processing
                             boolean result = jobWorker.work(job);
                             if (result) {
+                                jobRepository.save(job);
                                 log.info("Job {} has been successfully executed", jobId);
                                 try {
-                                    jobCompletedWebhook.invoke(job);
+                                    if (job.getResult() != null) jobCompletedWebhook.invoke(job);
                                 } catch (Exception e) {
                                     log.warn("Exception while calling webhook for job {}", jobId, e);
                                 }
@@ -81,6 +82,7 @@ public class WorkerManagementService {
                 }
             } while (!jobs.isEmpty() && foundNewJob);
         } finally {
+            //log.debug("Exiting from worker management service");
             working.set(false);
         }
     }

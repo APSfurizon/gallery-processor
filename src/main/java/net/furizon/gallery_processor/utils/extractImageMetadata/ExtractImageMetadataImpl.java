@@ -7,6 +7,7 @@ import com.drew.lang.annotations.NotNull;
 import com.drew.lang.annotations.Nullable;
 import com.drew.metadata.Directory;
 import com.drew.metadata.Metadata;
+import com.drew.metadata.Tag;
 import com.drew.metadata.avi.AviDirectory;
 import com.drew.metadata.bmp.BmpHeaderDirectory;
 import com.drew.metadata.eps.EpsDirectory;
@@ -54,6 +55,10 @@ public class ExtractImageMetadataImpl implements ExtractImageMetadata {
             log.info("Parsing metadata from {}", file);
             Metadata metadata = ImageMetadataReader.readMetadata(file.toFile());
 
+            for (Directory directory : metadata.getDirectories())
+                for (Tag tag : directory.getTags())
+                    log.info("[{}] {} {}: {}", tag.getDirectoryName(), tag.getTagTypeHex(), tag.getTagName(), tag.getDescription());
+
             String cameraMaker = null;
             String cameraModel = null;
             String lensMaker = null;
@@ -64,42 +69,52 @@ public class ExtractImageMetadataImpl implements ExtractImageMetadata {
             String iso = null;
             OffsetDateTime shotTime = null;
 
-            var subIfdDir = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
-            if (subIfdDir != null) {
+            var subIfdDirList = metadata.getDirectoriesOfType(ExifSubIFDDirectory.class);
+            for (var subIfdDir : subIfdDirList) {
                 var subIfdDesc = new ExifSubIFDDescriptor(subIfdDir);
 
-                focal = subIfdDesc.getFocalLengthDescription();
-                shutter = subIfdDesc.getShutterSpeedDescription();
-                aperture = subIfdDesc.getApertureValueDescription();
-                iso = subIfdDesc.getIsoEquivalentDescription();
+                if (focal == null) focal = subIfdDesc.getFocalLengthDescription();
+                if (shutter == null) shutter = subIfdDesc.getShutterSpeedDescription();
+                if (shutter == null) shutter = subIfdDesc.getExposureTimeDescription();
+                if (aperture == null) aperture = subIfdDesc.getApertureValueDescription();
+                if (aperture == null) aperture = subIfdDesc.getFNumberDescription();
+                if (iso == null) iso = subIfdDesc.getIsoEquivalentDescription();
 
-                TimeZone zone = getTimeZone(subIfdDir);
-                ZoneId zoneId = zone == null ? GMT : zone.toZoneId();
-                var date = subIfdDir.getDateOriginal();
-                if (date != null) {
-                    shotTime = OffsetDateTime.ofInstant(date.toInstant(), zoneId);
+                if (shotTime == null) {
+                    TimeZone zone = getTimeZone(subIfdDir);
+                    ZoneId zoneId = zone == null ? GMT : zone.toZoneId();
+                    var date = subIfdDir.getDateOriginal();
+                    if (date != null) {
+                        shotTime = OffsetDateTime.ofInstant(date.toInstant(), zoneId);
+                    }
                 }
 
-                lensMaker = subIfdDir.getString(ExifIFD0Directory.TAG_LENS_MAKE);
-                lensModel = subIfdDir.getString(ExifIFD0Directory.TAG_LENS_MODEL);
+                if (lensMaker == null) lensMaker = subIfdDir.getString(ExifIFD0Directory.TAG_LENS_MAKE);
+                if (lensModel == null) lensModel = subIfdDir.getString(ExifIFD0Directory.TAG_LENS_MODEL);
             }
 
-            var ifd0Dir = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
-            if (ifd0Dir != null) {
+            var ifd0DirList = metadata.getDirectoriesOfType(ExifIFD0Directory.class);
+            for (var ifd0Dir : ifd0DirList) {
                 //var ifd0Desc = new ExifIFD0Descriptor(ifd0Dir);
 
-                cameraMaker = ifd0Dir.getString(ExifIFD0Directory.TAG_MAKE);
-                cameraModel = ifd0Dir.getString(ExifIFD0Directory.TAG_MODEL);
+                if (cameraMaker == null) cameraMaker = ifd0Dir.getString(ExifIFD0Directory.TAG_MAKE);
+                if (cameraModel == null) cameraModel = ifd0Dir.getString(ExifIFD0Directory.TAG_MODEL);
 
-                lensMaker = lensMaker != null ? lensMaker : ifd0Dir.getString(ExifIFD0Directory.TAG_LENS_MAKE);
-                lensModel = lensModel != null ? lensModel : ifd0Dir.getString(ExifIFD0Directory.TAG_LENS_MODEL);
+                if (lensMaker == null) lensMaker = ifd0Dir.getString(ExifIFD0Directory.TAG_LENS_MAKE);
+                if (lensModel == null) lensModel = ifd0Dir.getString(ExifIFD0Directory.TAG_LENS_MODEL);
 
             }
 
             if (resultObj.getShotTimestamp() == null) resultObj.setShotTimestamp(shotTime);
             //This may still fail, so an extra call to imagemagick might be needed
-            if (resultObj.getResolutionWidth() == 0) resultObj.setResolutionWidth(getImageWidth(metadata));
-            if (resultObj.getResolutionHeight() == 0) resultObj.setResolutionHeight(getImageHeight(metadata));
+            if (resultObj.getResolutionWidth() == 0) {
+                Integer i = getImageWidth(metadata);
+                if (i != null) resultObj.setResolutionWidth(i);
+            }
+            if (resultObj.getResolutionHeight() == 0) {
+                Integer i = getImageHeight(metadata);
+                if (i != null) resultObj.setResolutionHeight(i);
+            }
 
             if (cameraMaker == null
                     && cameraModel == null

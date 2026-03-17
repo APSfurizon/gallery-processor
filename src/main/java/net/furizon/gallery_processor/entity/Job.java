@@ -1,6 +1,7 @@
 package net.furizon.gallery_processor.entity;
 
 
+import jakarta.annotation.Nullable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -8,6 +9,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Null;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import net.furizon.gallery_processor.dto.JobType;
@@ -30,14 +32,15 @@ public class Job {
     @Positive
     private long submittedAt;
 
-    @Null
+    @Nullable
+    @Column(columnDefinition = "TEXT")
     private String result;
 
     @Column(columnDefinition = "integer default 0")
-    @Positive
+    @PositiveOrZero
     private int retries = 0;
 
-    @Null
+    @Nullable
     private JobType type;
 
     public Job incRetries() {

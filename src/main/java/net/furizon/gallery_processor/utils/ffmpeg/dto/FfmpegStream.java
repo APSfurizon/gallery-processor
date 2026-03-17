@@ -12,7 +12,7 @@ public class FfmpegStream {
 
     @NotNull
     @JsonProperty("codec_type")
-    private final CodecType codecType;
+    private final String codecType;
 
     @Nullable
     @JsonProperty("codec_name")

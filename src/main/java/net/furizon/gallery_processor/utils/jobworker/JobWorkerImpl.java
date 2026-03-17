@@ -14,24 +14,23 @@ import net.furizon.gallery_processor.repository.JobRepository;
 import net.furizon.gallery_processor.utils.extractFileType.ExtractFileType;
 import net.furizon.gallery_processor.utils.extractImageMetadata.ExtractImageMetadata;
 import net.furizon.gallery_processor.utils.ffmpeg.Ffmpeg;
-import net.furizon.gallery_processor.utils.hashFile.HashFile;
 import net.furizon.gallery_processor.utils.imagemagick.ImageMagick;
 import org.apache.commons.io.FilenameUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.MimeType;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class JobWorkerImpl implements JobWorker {
-    @NotNull
-    private final HashFile hashFile;
     @NotNull
     private final ExtractFileType extractFileType;
     @NotNull
@@ -64,14 +63,14 @@ public class JobWorkerImpl implements JobWorker {
         Path tempFile = null;
         try {
             String fullFileName = job.getName();
-            String fileName = FilenameUtils.getName(fullFileName);
+            String fileName = FilenameUtils.getBaseName(fullFileName);
             String extension = "." + FilenameUtils.getExtension(fullFileName);
             tempFile = Files.createTempFile(null, extension);
             log.info("[{}] Creating temp file {}", jobId, tempFile);
 
             // Download file
             log.debug("[{}] Downloading from s3 '{}'", jobId, job.getName());
-            s3DirectDownload.toFile(job.getName(), tempFile);
+            s3DirectDownload.toFile(job.getName(), tempFile, true);
 
             // Check magicnumbers for mimetype. If unsupported, quit by setting his type to unknown and empty result field. File deletion will be handled by backend
             FileType fileType = extractFileType.invoke(tempFile);
@@ -119,8 +118,7 @@ public class JobWorkerImpl implements JobWorker {
 
             //Extract filesize, hash, content type extracted already
             log.debug("[{}] Loading hash of file", jobId);
-            dataBuilder.hash(hashFile.hashFile(tempFile));
-            dataBuilder.mimeType(fileType.getMimeType());
+            dataBuilder.mimeType(processMimeType(fileType, isPhoto));
             dataBuilder.fileSize(Files.size(tempFile));
             var data = dataBuilder.build();
 
@@ -176,7 +174,8 @@ public class JobWorkerImpl implements JobWorker {
                                 @NotNull GalleryProcessorUploadData data,
                                 @NotNull FileType fileType,
                                 boolean needsRender) throws IOException {
-        final String tempFileName = tempFile.getFileName().toString();
+        final String tempFileName = "_" + FilenameUtils.getBaseName(tempFile.getFileName().toString());
+        final String webpExtension = "." + FileType.WebP.getCommonExtension();
         final long jobId = job.getId();
         //First round of pass, trying to get as much metadata as possible
         log.debug("[{}] First pass of exif", jobId);
@@ -185,7 +184,7 @@ public class JobWorkerImpl implements JobWorker {
         if (needsRender || data.getPhotoMetadata() == null) { //if photo metadata is null we try to conver the image to a better format
             Path render = null;
             try {
-                render = Files.createTempFile("rend_", tempFileName);
+                render = Files.createTempFile("rend_", tempFileName + webpExtension);
                 log.info("[{}] Render tempfile: {}", jobId, render);
                 //If needs a render do it now
                 log.debug("[{}] Render", jobId);
@@ -198,7 +197,7 @@ public class JobWorkerImpl implements JobWorker {
                 //Upload rendered image to S3
                 if (needsRender) {
                     log.info("[{}] Uploading render {}", jobId, render);
-                    final String renderKey = renderPrefix + fileName;
+                    final String renderKey = renderPrefix + fileName + webpExtension;
                     s3DirectUpload.upload(renderKey, render);
                     data.setRenderedMediaName(renderKey);
                 }
@@ -215,7 +214,7 @@ public class JobWorkerImpl implements JobWorker {
 
         Path thumbnail = null;
         try {
-            thumbnail = Files.createTempFile("thumb_", tempFileName);
+            thumbnail = Files.createTempFile("thumb_", tempFileName + webpExtension);
             log.info("[{}] Thumbnail tempfile: {}", jobId, thumbnail);
             //Create thumbnail
             log.debug("[{}] Creating thumbnail", jobId);
@@ -229,7 +228,7 @@ public class JobWorkerImpl implements JobWorker {
 
             //Upload thumbnail to s3
             log.info("[{}] Uploading thumbnail {}", jobId, thumbnail);
-            final String thumbnailKey = thumbnailPrefix + fileName;
+            final String thumbnailKey = thumbnailPrefix + fileName + webpExtension;
             s3DirectUpload.upload(thumbnailKey, thumbnail);
             data.setThumbnailMediaName(thumbnailKey);
 
@@ -245,13 +244,14 @@ public class JobWorkerImpl implements JobWorker {
                                 @NotNull String fileName,
                                 @NotNull GalleryProcessorUploadData data,
                                 @NotNull FileType fileType) throws IOException {
-        final String tempFileName = tempFile.getFileName().toString();
+        final String tempFileName = "_" + FilenameUtils.getBaseName(tempFile.getFileName().toString());
+        final String webpExtension = "." + FileType.WebP.getCommonExtension();
         final long jobId = job.getId();
         Path render = null;
         Path thumbnail = null;
         try {
-            render = Files.createTempFile("rend_", tempFileName);
-            thumbnail = Files.createTempFile("thumb_", tempFileName);
+            render = Files.createTempFile("rend_", tempFileName + webpExtension);
+            thumbnail = Files.createTempFile("thumb_", tempFileName + webpExtension);
             log.info("[{}] Render tempfile: {}, Thumbnail tempfile: {}", jobId, render, thumbnail);
 
             //Get video metadata
@@ -282,12 +282,12 @@ public class JobWorkerImpl implements JobWorker {
 
             //Upload thumbnail and render frame
             log.info("[{}] Uploading render {}", jobId, thumbnail);
-            final String renderKey = renderPrefix + fileName;
+            final String renderKey = renderPrefix + fileName + webpExtension;
             s3DirectUpload.upload(renderKey, render);
             data.setRenderedMediaName(renderKey);
 
             log.info("[{}] Uploading thumbnail {}", jobId, thumbnail);
-            final String thumbnailKey = thumbnailPrefix + fileName;
+            final String thumbnailKey = thumbnailPrefix + fileName + webpExtension;
             s3DirectUpload.upload(thumbnailKey, thumbnail);
             data.setThumbnailMediaName(thumbnailKey);
 
@@ -297,5 +297,24 @@ public class JobWorkerImpl implements JobWorker {
         }
 
         return true;
+    }
+
+    private static final Map<FileType, String> RAW_TO_CAMERA_MAKER = Map.ofEntries(
+            Map.entry(FileType.Arw, "sony"),
+            Map.entry(FileType.Cr2, "canon"),
+            Map.entry(FileType.Crw, "canon"),
+            Map.entry(FileType.Nef, "nikon"),
+            Map.entry(FileType.Orf, "olympus"),
+            Map.entry(FileType.Raf, "fuji")
+    );
+    private static @NotNull String processMimeType(@NotNull FileType mimeType, boolean isImage) {
+        String ret = mimeType.getMimeType();
+        if (ret != null) {
+            return ret;
+        }
+        if (!isImage) {
+            return "video/*";
+        }
+        return "image/x-" + RAW_TO_CAMERA_MAKER.get(mimeType) + "-" + mimeType.getCommonExtension();
     }
 }

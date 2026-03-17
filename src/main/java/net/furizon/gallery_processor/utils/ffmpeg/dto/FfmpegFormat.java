@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Data
 public class FfmpegFormat {
@@ -46,14 +47,14 @@ public class FfmpegFormat {
     @Data
     public static class Tags {
         @Nullable
-        @Value("creation_time")
         @Getter(AccessLevel.NONE)
+        @JsonProperty("creation_time")
         private final String creationTime;
 
-        public @Nullable LocalDateTime getCreationTime() {
+        public @Nullable OffsetDateTime getCreationTime() {
             if (creationTime == null) return null;
             if  (creationTime.isEmpty()) return null;
-            return LocalDateTime.parse(creationTime);
+            return OffsetDateTime.parse(creationTime);
         }
     }
 }
