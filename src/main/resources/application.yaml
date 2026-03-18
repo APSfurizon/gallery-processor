@@ -44,6 +44,7 @@ worker:
     password: ${JOB_COMPLETED_WEBHOOK_PASSWORD:changeme}
     url: ${JOB_COMPLETED_WEBHOOK_URL:}
   render:
+    force-above-size: ${RENDER_FORCE_ABOVE_SIZE:3145728} # 3 MB
     prefix: ${RENDER_REDER_PREFIX:rend_}
     max-dimension-width: ${RENDER_MAX_WIDTH:3840}
     max-dimension-height: ${RENDER_MAX_HEIGHT:2160}

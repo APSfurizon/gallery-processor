@@ -56,6 +56,9 @@ public class JobWorkerImpl implements JobWorker {
     @Value("${worker.thumbnail.prefix}")
     private String thumbnailPrefix;
 
+    @Value("${worker.render.force-above-size}")
+    private long forceRenderAboveFileSize;
+
     @Override
     public boolean work(@NotNull Job job) {
         long jobId = job.getId();
@@ -124,6 +127,10 @@ public class JobWorkerImpl implements JobWorker {
             boolean result;
             log.debug("[{}] Executing inner function (isPhoto = {})", jobId, isPhoto);
             if (isPhoto) {
+                if (data.getFileSize() > forceRenderAboveFileSize) {
+                    needsRender = true;
+                }
+
                 // If image, extract exif, extract resolution
                 result = handleImage(
                     job,
