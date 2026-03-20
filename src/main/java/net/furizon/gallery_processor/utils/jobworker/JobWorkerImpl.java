@@ -5,12 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.furizon.gallery_processor.dto.JobType;
+import net.furizon.gallery_processor.dto.SupportedTypeResponse;
 import net.furizon.gallery_processor.dto.upload.GalleryProcessorUploadData;
 import net.furizon.gallery_processor.dto.upload.UploadVideoMetadata;
 import net.furizon.gallery_processor.entity.Job;
 import net.furizon.gallery_processor.infrastructure.s3.actions.directDownload.S3DirectDownload;
 import net.furizon.gallery_processor.infrastructure.s3.actions.directUpload.S3DirectUpload;
-import net.furizon.gallery_processor.repository.JobRepository;
 import net.furizon.gallery_processor.utils.extractFileType.ExtractFileType;
 import net.furizon.gallery_processor.utils.extractImageMetadata.ExtractImageMetadata;
 import net.furizon.gallery_processor.utils.ffmpeg.Ffmpeg;
@@ -24,7 +24,7 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -46,9 +46,6 @@ public class JobWorkerImpl implements JobWorker {
     private final Ffmpeg ffmpeg;
 
     @NotNull
-    private final JobRepository jobRepository;
-
-    @NotNull
     private final ObjectMapper objectMapper;
 
     @Value("${worker.render.prefix}")
@@ -58,6 +55,45 @@ public class JobWorkerImpl implements JobWorker {
 
     @Value("${worker.render.force-above-size}")
     private long forceRenderAboveFileSize;
+
+    // https://github.com/drewnoakes/metadata-extractor/blob/main/Source/com/drew/imaging/FileType.java
+    // https://imagemagick.org/script/formats.php
+    // TODO +++ WHENEVER YOU UPDATE THESE REMEMEBR TO MANUALLY UPDATE THE SUPPORT LIST IN FZ-BACKEND (GetUploadLimitsUseCase) !!!
+    private static final Set<FileType> TYPE_PHOTOS = Set.of(
+            FileType.Png,
+            FileType.Jpeg,
+            FileType.WebP,
+            FileType.Heif,
+            FileType.Tiff,
+            FileType.Arw,
+            FileType.Cr2,
+            FileType.Crw,
+            FileType.Nef,
+            FileType.Orf,
+            //FileType.Pef, //TODO watch for updates
+            FileType.Raf
+    );
+    private static final Set<FileType> TYPE_VIDEOS = Set.of(
+            FileType.Flv,
+            FileType.Avi,
+            FileType.QuickTime, //mov
+            FileType.Mp4
+    );
+    private static final Set<FileType> NEEDS_RENDER_TYPE = Set.of(
+            FileType.Heif,
+            FileType.Tiff,
+            FileType.Arw,
+            FileType.Cr2,
+            FileType.Crw,
+            FileType.Nef,
+            FileType.Orf,
+            //FileType.Pef, //TODO watch for updates
+            FileType.Raf,
+            FileType.Flv,
+            FileType.Avi,
+            FileType.QuickTime, //mov
+            FileType.Mp4
+    );
 
     @Override
     public boolean work(@NotNull Job job) {
@@ -76,44 +112,18 @@ public class JobWorkerImpl implements JobWorker {
 
             // Check magicnumbers for mimetype. If unsupported, quit by setting his type to unknown and empty result field. File deletion will be handled by backend
             FileType fileType = extractFileType.invoke(tempFile);
-            boolean isPhoto;
-            boolean needsRender;
-            // https://github.com/drewnoakes/metadata-extractor/blob/main/Source/com/drew/imaging/FileType.java
-            // https://imagemagick.org/script/formats.php
-            switch (fileType) {
-                case FileType.Png:
-                case FileType.Jpeg:
-                case FileType.WebP:
-                    isPhoto = true;
-                    needsRender = false;
-                    break;
-                case FileType.Heif:
-                case FileType.Tiff:
-                case FileType.Arw:
-                case FileType.Cr2:
-                case FileType.Crw:
-                case FileType.Nef:
-                case FileType.Orf:
-                //case FileType.Pef: //TODO watch for updates
-                case FileType.Raf:
-                    isPhoto = true;
-                    needsRender = true;
-                    break;
-                case FileType.Flv:
-                case FileType.Avi:
-                case FileType.QuickTime: //mov
-                case FileType.Mp4:
-                    isPhoto = false;
-                    needsRender = true;
-                    break;
-                default: {
+            boolean isPhoto = TYPE_PHOTOS.contains(fileType);
+            if (!isPhoto) {
+                boolean isVideo = TYPE_VIDEOS.contains(fileType);
+                if (!isVideo) {
+                    //Unknown file type
                     log.warn("[{}] Unsupported file type {}. Marking it as UNKNOWN", jobId, fileType);
                     job.setResult("{}");
                     job.setType(JobType.UNKNOWN);
-                    jobRepository.save(job);
                     return true;
                 }
             }
+            boolean needsRender = NEEDS_RENDER_TYPE.contains(fileType);
 
             var dataBuilder = GalleryProcessorUploadData.builder();
             job.setType(isPhoto ? JobType.IMAGE : JobType.VIDEO);
@@ -322,5 +332,18 @@ public class JobWorkerImpl implements JobWorker {
             return "video/*";
         }
         return "image/x-" + RAW_TO_CAMERA_MAKER.get(mimeType) + "-" + mimeType.getCommonExtension();
+    }
+    public static @NotNull SupportedTypeResponse getSupportedTypes() {
+        Set<FileType> support = new HashSet<>();
+        support.addAll(TYPE_PHOTOS);
+        support.addAll(TYPE_VIDEOS);
+
+        Set<String> fileExtensions = new HashSet<>();
+        Set<String> mimeTypes = new HashSet<>();
+        for (FileType type : support) {
+            fileExtensions.addAll(List.of(type.getAllExtensions()));
+            mimeTypes.add(processMimeType(type, TYPE_PHOTOS.contains(type)));
+        }
+        return new SupportedTypeResponse(fileExtensions, mimeTypes);
     }
 }

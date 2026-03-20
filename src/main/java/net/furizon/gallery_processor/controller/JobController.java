@@ -11,10 +11,12 @@ import lombok.extern.slf4j.Slf4j;
 import net.furizon.gallery_processor.dto.JobResponse;
 import net.furizon.gallery_processor.dto.JobStatus;
 import net.furizon.gallery_processor.dto.NewJobRequest;
+import net.furizon.gallery_processor.dto.SupportedTypeResponse;
 import net.furizon.gallery_processor.entity.Job;
 import net.furizon.gallery_processor.infrastructure.security.InternalAuthorize;
 import net.furizon.gallery_processor.repository.JobRepository;
 import net.furizon.gallery_processor.service.WorkerManagementService;
+import net.furizon.gallery_processor.utils.jobworker.JobWorkerImpl;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -115,5 +117,11 @@ public class JobController {
         log.info("Job {} not found", jobId);
         //response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         return JobResponse.notFound(jobId);
+    }
+
+    @Operation(summary = "Gets the list of currently supported mime types and file extensions")
+    @GetMapping("/get-supported-types")
+    public @NotNull SupportedTypeResponse getSupportedTypes() {
+        return JobWorkerImpl.getSupportedTypes();
     }
 }
