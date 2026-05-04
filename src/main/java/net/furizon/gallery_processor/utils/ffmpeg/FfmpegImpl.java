@@ -2,6 +2,7 @@ package net.furizon.gallery_processor.utils.ffmpeg;
 
 import com.drew.imaging.FileType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.furizon.gallery_processor.dto.upload.GalleryProcessorUploadData;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -141,5 +143,11 @@ public class FfmpegImpl implements Ffmpeg {
                 "-pix_fmt", "yuv420p",
                 dest.toAbsolutePath().toString()
         );
+    }
+
+    @PostConstruct
+    private void printBinary() {
+        log.info("ffmpeg binary: {}. Full path: {}", ffmpegBinary, ffmpegBinary == null ? null : Paths.get(ffmpegBinary).toAbsolutePath());
+        log.info("ffprobe binary: {}. Full path: {}", ffprobeBinary, ffprobeBinary == null ? null : Paths.get(ffprobeBinary).toAbsolutePath());
     }
 }

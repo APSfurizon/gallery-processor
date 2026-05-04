@@ -1,6 +1,7 @@
 package net.furizon.gallery_processor.utils.imagemagick;
 
 import com.drew.imaging.FileType;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.furizon.gallery_processor.dto.upload.GalleryProcessorUploadData;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Set;
 
 @Slf4j
@@ -46,7 +48,7 @@ public class ImageMagickImpl implements ImageMagick {
 
     @NotNull
     private String getFullSourceFIle(@NotNull Path file, @NotNull FileType fileType) {
-        return PREFIX_NEEDED_FILE_TYPES.contains(fileType) ? fileType.getName().toLowerCase() + ":" : "" + file.toAbsolutePath().toString();
+        return (PREFIX_NEEDED_FILE_TYPES.contains(fileType) ? fileType.getName().toLowerCase() + ":" : "") + file.toAbsolutePath().toString();
     }
 
     @Override
@@ -105,6 +107,11 @@ public class ImageMagickImpl implements ImageMagick {
                 "-define", "webp:preserve-metadata=all",
                 dest.toAbsolutePath().toString()
         );
+    }
+
+    @PostConstruct
+    private void printBinary() {
+        log.info("ImageMagick binary: {}. Full path: {}", imagemagickBinary, imagemagickBinary == null ? null : Paths.get(imagemagickBinary).toAbsolutePath());
     }
 }
 

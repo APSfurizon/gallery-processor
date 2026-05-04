@@ -14,6 +14,7 @@ import net.furizon.gallery_processor.infrastructure.http.client.HttpRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 
@@ -60,6 +61,16 @@ public class JobCompletedWebhookImpl implements JobCompletedWebhook {
         } catch (final HttpClientErrorException ex) {
             log.error(ex.getResponseBodyAsString());
             return false;
+        }
+    }
+
+    @Async
+    @Override
+    public void runAsync(@NotNull Job job, long jobId) {
+        try {
+            invoke(job);
+        } catch (Exception e) {
+            log.warn("Exception while calling webhook for job {}", jobId, e);
         }
     }
 }

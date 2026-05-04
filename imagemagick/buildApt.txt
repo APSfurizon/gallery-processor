@@ -1,0 +1,5 @@
+apt build-dep imagemagick
+apt install checkinstall libwebp-dev libopenjp2-7-dev librsvg2-dev libde265-dev libheif-dev libjxl-dev libomp-dev
+git clone --depth 1 --branch 7.1.2-21 https://github.com/ImageMagick/ImageMagick.git ImageMagick
+cd ImageMagick
+./configure --disable-shared --enable-static --with-magick-plus-plus=no --with-modules --with-libtiff=yes --enable-hdri=yes --with-bzlib=yes --with-autotrace=yes --with-djvu=yes --with-dps=yes --with-fftw=yes --with-flif=yes --with-fpx=yes --with-fontconfig=yes --with-freetype=yes --with-gslib=yes --with-gvc=yes --with-heic=yes --with-jbig=yes --with-jpeg=yes --with-jxl=yes --with-dmr=yes --with-lcms=yes --with-lqr=yes --with-ltdl=yes --with-lzma=yes --with-magick-plus-plus=yes --with-openexr=yes --with-openjp2=yes --with-pango=yes --with-perl=yes --with-png=yes --with-raqm=yes --with-raw=yes --with-rsvg=yes --with-tiff=yes --with-uhdr=yes --with-webp=yes --with-wmf=yes --with-xml=yes --with-zip=yes --with-zlib=yes --with-zstd=yes --with-ltdl=yes --with-perl=no 2>&1 | tee ../log.txt

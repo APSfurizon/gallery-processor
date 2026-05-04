@@ -35,20 +35,20 @@ public class CmdExecutorImpl implements CmdExecutor {
         }
         if (!terminated) {
             log.error("[{}-{}] has timed out!", caller, uuid);
-            throw new IOException("");
+            throw new IOException("Execution timed out");
         }
 
         String stdout;
         try (InputStream is = p.getInputStream()) {
             stdout = new String(is.readAllBytes(), StandardCharsets.UTF_8);
         }
+        log.info("[{}-{}] Command result: `{}`", caller, uuid, stdout);
 
         if (p.exitValue() != 0) {
             log.error("[{}-{}] exited with code {}", caller, uuid, p.exitValue());
-            throw new IOException("");
+            throw new IOException("Exit is nonzero");
         }
 
-        log.info("[{}-{}] Command result: `{}`", caller, uuid, stdout);
         return stdout;
     }
 }

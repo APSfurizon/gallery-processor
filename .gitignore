@@ -45,3 +45,5 @@ build/
 /prod
 /templates/jte/custom/gg
 magick
+/libs
+imagemagick/log.txt

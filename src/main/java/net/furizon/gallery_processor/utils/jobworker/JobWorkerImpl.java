@@ -67,11 +67,11 @@ public class JobWorkerImpl implements JobWorker {
             FileType.Tiff,
             FileType.Arw,
             FileType.Cr2,
-            FileType.Crw,
-            FileType.Nef,
-            FileType.Orf,
+            //FileType.Crw,
+            FileType.Nef
+            //FileType.Orf,
             //FileType.Pef, //TODO watch for updates
-            FileType.Raf
+            //FileType.Raf
     );
     private static final Set<FileType> TYPE_VIDEOS = Set.of(
             FileType.Flv,
@@ -84,11 +84,11 @@ public class JobWorkerImpl implements JobWorker {
             FileType.Tiff,
             FileType.Arw,
             FileType.Cr2,
-            FileType.Crw,
+            //FileType.Crw,
             FileType.Nef,
-            FileType.Orf,
+            //FileType.Orf,
             //FileType.Pef, //TODO watch for updates
-            FileType.Raf,
+            //FileType.Raf,
             FileType.Flv,
             FileType.Avi,
             FileType.QuickTime, //mov
@@ -168,7 +168,8 @@ public class JobWorkerImpl implements JobWorker {
             job.setResult(objectMapper.writeValueAsString(data));
         } catch (IOException e) {
             log.error("IOException while working on job {}", job.getId(), e);
-            return true;
+            throw new RuntimeException(e);
+            //return true;
         } catch (NoSuchKeyException e) {
             log.error("NoSuchKey while working on job {}", job.getId(), e);
             return false;

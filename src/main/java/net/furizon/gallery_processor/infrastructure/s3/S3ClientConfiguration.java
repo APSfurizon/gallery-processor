@@ -34,6 +34,12 @@ public class S3ClientConfiguration {
         var b = S3Client.builder()
                 .region(Region.of(s3Config.getRegion()))
                 .forcePathStyle(s3Config.isBucketPathStyle())
+                .serviceConfiguration(
+                    S3Configuration.builder()
+                            //.pathStyleAccessEnabled(s3Config.isBucketPathStyle()) needs to be specified only once
+                            .chunkedEncodingEnabled(s3Config.isChunkEncoding())
+                        .build()
+                )
                 .credentialsProvider(getCredentialsProvider());
 
         String endpoint = s3Config.getEndpoint();

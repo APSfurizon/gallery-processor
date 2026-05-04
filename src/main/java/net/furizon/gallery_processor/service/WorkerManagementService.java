@@ -63,11 +63,7 @@ public class WorkerManagementService {
                             if (result) {
                                 jobRepository.save(job);
                                 log.info("Job {} has been successfully executed", jobId);
-                                try {
-                                    if (job.getResult() != null) jobCompletedWebhook.invoke(job);
-                                } catch (Exception e) {
-                                    log.warn("Exception while calling webhook for job {}", jobId, e);
-                                }
+                                jobCompletedWebhook.runAsync(job, jobId);
                             } else {
                                 log.warn("Job {} failed. Will not retry...", jobId);
                                 job.setRetries(Integer.MAX_VALUE);
