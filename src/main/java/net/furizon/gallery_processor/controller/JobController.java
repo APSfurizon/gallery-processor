@@ -103,6 +103,7 @@ public class JobController {
             log.info("Retrying job {}", jobId);
             Job job = res.get();
             job.setRetries(0);
+            job.setResult(null);
             jobRepository.save(job);
             workerService.runAsync();
 
