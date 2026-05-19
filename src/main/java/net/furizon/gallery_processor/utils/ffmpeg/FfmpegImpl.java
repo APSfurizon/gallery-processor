@@ -127,7 +127,7 @@ public class FfmpegImpl implements Ffmpeg {
     @Override
     public void extractFirstFrame(@NotNull Path source, @NotNull Path dest, @NotNull FileType fileType, int duration) throws IOException {
         log.info("Extracting first frame from file {} to file {}", source, dest);
-        int seek = Math.min(duration / 1000, videoMaxSeek) % 60;
+        int seek = Math.min(Math.max((duration / 1000) - 1, 0), videoMaxSeek) % 60;
         cmdExecutor.execute(
             "FFMPEG_FIRSTFRAME",
                 ffmpegBinary,
