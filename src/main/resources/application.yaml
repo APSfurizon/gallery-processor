@@ -72,3 +72,11 @@ cmd-executor:
   ffprobe-binary: ${CMD_FFPROBE_BINARY:ffprobe}
   timeout: ${CMD_TIMEOUT_SECS:30}
 
+backupper:
+  azure:
+    enabled: ${BACKUPPER_AZURE_ENABLED:false}
+    endpoint: ${BACKUPPER_AZURE_ENDPOINT:https://furizonfurizonfurizon.blob.core.windows.net/}
+    sas-token: ${BACKUPPER_AZURE_SAS_TOKEN:b}
+    container: ${BACKUPPER_AZURE_CONTAINER:c}
+    multichunk-threshold: ${BACKUPPER_AZURE_MULTICHUNK_THRESHOLD:33554432} #32 MB
+    max-concurrency: ${BACKUPPER_AZURE_MAX_CONCURRENCY:32}

@@ -11,6 +11,7 @@ import net.furizon.gallery_processor.dto.upload.UploadVideoMetadata;
 import net.furizon.gallery_processor.entity.Job;
 import net.furizon.gallery_processor.infrastructure.s3.actions.directDownload.S3DirectDownload;
 import net.furizon.gallery_processor.infrastructure.s3.actions.directUpload.S3DirectUpload;
+import net.furizon.gallery_processor.utils.autobackupper.Backupper;
 import net.furizon.gallery_processor.utils.extractFileType.ExtractFileType;
 import net.furizon.gallery_processor.utils.extractImageMetadata.ExtractImageMetadata;
 import net.furizon.gallery_processor.utils.ffmpeg.Ffmpeg;
@@ -45,6 +46,12 @@ public class JobWorkerImpl implements JobWorker {
     @NotNull
     private final Ffmpeg ffmpeg;
 
+    //BACKUP NOTE: To speed up a bit the render process, we DO NOT automatically backup the render/thumbnail, but just the main file
+    // Backupping of thumbnail/render should be done outside, IE with rclone on a cronjob. In this way we save the time of uploading
+    //  the two extra files while we're in the middle of a render batch
+    @NotNull
+    private final Backupper backupper;
+
     @NotNull
     private final ObjectMapper objectMapper;
 
@@ -55,6 +62,7 @@ public class JobWorkerImpl implements JobWorker {
 
     @Value("${worker.render.force-above-size}")
     private long forceRenderAboveFileSize;
+
 
     // https://github.com/drewnoakes/metadata-extractor/blob/main/Source/com/drew/imaging/FileType.java
     // https://imagemagick.org/script/formats.php
@@ -107,8 +115,8 @@ public class JobWorkerImpl implements JobWorker {
             log.info("[{}] Creating temp file {}", jobId, tempFile);
 
             // Download file
-            log.debug("[{}] Downloading from s3 '{}'", jobId, job.getName());
-            s3DirectDownload.toFile(job.getName(), tempFile, true);
+            log.debug("[{}] Downloading from s3 '{}'", jobId, fullFileName);
+            s3DirectDownload.toFile(fullFileName, tempFile, true);
 
             // Check magicnumbers for mimetype. If unsupported, quit by setting his type to unknown and empty result field. File deletion will be handled by backend
             FileType fileType = extractFileType.invoke(tempFile);
@@ -166,6 +174,7 @@ public class JobWorkerImpl implements JobWorker {
             }
 
             job.setResult(objectMapper.writeValueAsString(data));
+            backupper.uploadFile(fullFileName, tempFile);
         } catch (IOException e) {
             log.error("IOException while working on job {}", job.getId(), e);
             throw new RuntimeException(e);
@@ -216,6 +225,7 @@ public class JobWorkerImpl implements JobWorker {
                     log.info("[{}] Uploading render {}", jobId, render);
                     final String renderKey = renderPrefix + fileName + webpExtension;
                     s3DirectUpload.upload(renderKey, render);
+                    //backupper.uploadFile(renderKey, render); SEE BACKUP NOTE
                     data.setRenderedMediaName(renderKey);
                 }
             } finally {
@@ -247,6 +257,7 @@ public class JobWorkerImpl implements JobWorker {
             log.info("[{}] Uploading thumbnail {}", jobId, thumbnail);
             final String thumbnailKey = thumbnailPrefix + fileName + webpExtension;
             s3DirectUpload.upload(thumbnailKey, thumbnail);
+            //backupper.uploadFile(thumbnailKey, thumbnail); SEE BACKUP NOTE
             data.setThumbnailMediaName(thumbnailKey);
 
         } finally {
@@ -301,11 +312,13 @@ public class JobWorkerImpl implements JobWorker {
             log.info("[{}] Uploading render {}", jobId, thumbnail);
             final String renderKey = renderPrefix + fileName + webpExtension;
             s3DirectUpload.upload(renderKey, render);
+            //backupper.uploadFile(renderKey, render); SEE BACKUP NOTE
             data.setRenderedMediaName(renderKey);
 
             log.info("[{}] Uploading thumbnail {}", jobId, thumbnail);
             final String thumbnailKey = thumbnailPrefix + fileName + webpExtension;
             s3DirectUpload.upload(thumbnailKey, thumbnail);
+            //backupper.uploadFile(thumbnailKey, thumbnail); SEE BACKUP NOTE
             data.setThumbnailMediaName(thumbnailKey);
 
         } finally {
